@@ -1,0 +1,43 @@
+# Maven and Java build products
+**/target/
+*.class
+
+# Generated certificate database (RocksDB)
+certificates/
+
+# Native/CMake build products
+**/CMakeFiles/
+**/CMakeCache.txt
+**/cmake_install.cmake
+**/Makefile
+*.so
+*.dylib
+*.dll
+
+# IDE and editor settings
+.idea/
+.vscode/
+*.iml
+*.swp
+*~
+
+# Operating-system metadata, including Windows alternate-data-stream exports
+.DS_Store
+Thumbs.db
+*.Zone.Identifier
+
+# LaTeX build products
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.thm
+paper/main.pdf
+
+# Locally supplied SIAM macro distribution
+paper/siamart251216.cls
+paper/siamplain.bst

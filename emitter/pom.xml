@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>br.unb.cic</groupId>
+        <artifactId>td</artifactId>
+        <version>1.0</version>
+    </parent>
+    <artifactId>emitter</artifactId>
+    <properties>
+        <tdp.gpuDevices>0</tdp.gpuDevices>
+        <tdp.gpuSlots>7</tdp.gpuSlots>
+        <tdp.gpuBudgetMB>1024</tdp.gpuBudgetMB>
+        <tdp.gpuQueueCapacity></tdp.gpuQueueCapacity>
+        <tdp.gpuStatsPeriodSeconds></tdp.gpuStatsPeriodSeconds>
+        <tdp.twistedBraceletWorkers>auto</tdp.twistedBraceletWorkers>
+        <tdp.certificateDb>${project.basedir}/../certificates</tdp.certificateDb>
+        <tdp.certificateFlushSeconds>5</tdp.certificateFlushSeconds>
+    </properties>
+    <dependencies>
+        <dependency><groupId>colt</groupId><artifactId>colt</artifactId><version>1.2.0</version></dependency>
+        <dependency><groupId>com.google.guava</groupId><artifactId>guava</artifactId><version>31.0.1-jre</version></dependency>
+        <dependency><groupId>cc.redberry</groupId><artifactId>core</artifactId><version>1.1.10</version></dependency>
+        <dependency><groupId>commons-lang</groupId><artifactId>commons-lang</artifactId><version>2.6</version></dependency>
+        <dependency><groupId>org.rocksdb</groupId><artifactId>rocksdbjni</artifactId><version>10.4.2</version><classifier>linux64</classifier></dependency>
+        <dependency><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><version>${lombok.version}</version><scope>provided</scope></dependency>
+        <dependency><groupId>org.slf4j</groupId><artifactId>slf4j-api</artifactId><version>2.0.13</version></dependency>
+        <dependency><groupId>org.slf4j</groupId><artifactId>slf4j-simple</artifactId><version>2.0.13</version></dependency>
+        <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>${junit.version}</version><scope>test</scope></dependency>
+    </dependencies>
+    <build><plugins>
+        <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.13.0</version><configuration><release>${maven.compiler.release}</release><annotationProcessorPaths><path><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><version>${lombok.version}</version></path></annotationProcessorPaths></configuration></plugin>
+        <plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.1.0</version><executions>
+            <execution><id>default-cli</id><goals><goal>exec</goal></goals><configuration><executable>java</executable><commandlineArgs>-classpath %classpath -Djava.library.path=${project.build.directory}/native -Dtdp.gpuDevices=${tdp.gpuDevices} -Dtdp.gpuSlots=${tdp.gpuSlots} -Dtdp.gpuBudgetMB=${tdp.gpuBudgetMB} -Dtdp.gpuQueueCapacity=${tdp.gpuQueueCapacity} -Dtdp.gpuStatsPeriodSeconds=${tdp.gpuStatsPeriodSeconds} -Dtdp.twistedBraceletWorkers=${tdp.twistedBraceletWorkers} -Dtdp.certificateDb=${tdp.certificateDb} -Dtdp.certificateFlushSeconds=${tdp.certificateFlushSeconds} ${exec.mainClass} ${exec.args}</commandlineArgs></configuration></execution>
+            <execution><id>cmake-configure</id><phase>generate-sources</phase><goals><goal>exec</goal></goals><configuration><executable>cmake</executable><arguments><argument>-S</argument><argument>src/native</argument><argument>-B</argument><argument>${project.build.directory}/native</argument><argument>-DCMAKE_BUILD_TYPE=Release</argument></arguments></configuration></execution>
+            <execution><id>cmake-build</id><phase>compile</phase><goals><goal>exec</goal></goals><configuration><executable>bash</executable><arguments><argument>-lc</argument><argument>cmake --build &quot;${project.build.directory}/native&quot; --parallel &quot;$(nproc)&quot;</argument></arguments></configuration></execution>
+        </executions></plugin>
+        <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.2.5</version><configuration><argLine>-Djava.library.path=${project.build.directory}/native</argLine></configuration></plugin>
+    </plugins></build>
+</project>
