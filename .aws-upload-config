@@ -1,0 +1,8 @@
+[default]
+region = us-east-1
+s3 =
+    max_concurrent_requests = 100
+    max_queue_size = 10000
+    multipart_threshold = 64MB
+    multipart_chunksize = 256MB
+login_session = arn:aws:iam::422575169551:root
