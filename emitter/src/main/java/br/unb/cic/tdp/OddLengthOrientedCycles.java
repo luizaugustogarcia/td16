@@ -240,7 +240,8 @@ public class OddLengthOrientedCycles {
             final int maxMoves
     ) {
         return candidate.asCyclicTargetPair()
-                .map(pair -> SortingSearch.searchForSorting(pair, minRate, maxMoves))
+                .map(pair -> SortingSearch.searchForSorting(
+                        pair.canonicalRepresentative(), minRate, maxMoves))
                 .orElseGet(List::of);
     }
 
