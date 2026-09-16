@@ -34,8 +34,8 @@ public final class TwistedBraceletKey implements Comparable<TwistedBraceletKey> 
      * convention is useful for an intrinsic representation, but it is not the
      * fixed color order: after a rotation, cycles belonging to two different
      * annotated parts can exchange their first-occurrence labels.  The fixed
-     * alphabet orders colors by decreasing size, then puts oriented colors
-     * before unoriented colors of the same size, and uses first occurrence only
+     * alphabet orders colors by decreasing size, then puts unoriented colors
+     * before oriented colors of the same size, and uses first occurrence only
      * to order indistinguishable colors.  Oriented ranks follow their color.
      */
     private static int compareInFixedColorOrder(
@@ -72,7 +72,7 @@ public final class TwistedBraceletKey implements Comparable<TwistedBraceletKey> 
                 return sizeComparison;
             }
             final var orientationComparison = Boolean.compare(
-                    oriented[right], oriented[left]);
+                    oriented[left], oriented[right]);
             return orientationComparison != 0
                     ? orientationComparison
                     : Integer.compare(left, right);

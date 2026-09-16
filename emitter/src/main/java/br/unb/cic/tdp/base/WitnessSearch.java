@@ -23,9 +23,8 @@ public final class WitnessSearch {
     public static List<Cycle> search(final CyclicTargetPair pair,
                                      final float minimumRate,
                                      final int maximumMoves) {
-        final var canonicalPair = pair.canonicalRepresentative();
-        final var omega = canonicalPair.getOmega();
-        final var beta = canonicalPair.getBeta();
+        final var omega = pair.getOmega();
+        final var beta = pair.getBeta();
         final var betaBytes = new byte[beta.size()];
         for (var index = 0; index < beta.size(); index++) {
             betaBytes[index] = (byte) beta.get(index);
@@ -38,12 +37,12 @@ public final class WitnessSearch {
             return moves;
         }
         // The rate configures the GPU search; it is not a certificate obligation.
-        CertificateValidator.validate(canonicalPair, moves, maximumMoves);
+        CertificateValidator.validate(pair, moves, maximumMoves);
         final var writer = certificateWriter;
         if (writer == null) {
             throw new IllegalStateException("Native witness succeeded without a proof-scoped certificate writer");
         }
-        writer.enqueue(canonicalPair, moves);
+        writer.enqueue(pair, moves);
         writer.throwIfFailed();
         return moves;
     }

@@ -11,20 +11,17 @@ public final class CertificateValidator {
     private CertificateValidator() {
     }
 
-    public static void validate(final CyclicTargetPair canonicalPair,
+    public static void validate(final CyclicTargetPair pair,
                                 final List<Cycle> moves,
                                 final int maximumMoves) {
-        if (canonicalPair != canonicalPair.canonicalRepresentative()) {
-            throw new IllegalArgumentException("Certificates must be validated from the canonical representative");
-        }
         if (moves.isEmpty() || moves.size() > maximumMoves) {
             throw new IllegalArgumentException("Certificate has " + moves.size()
                     + " moves; the required range is 1.." + maximumMoves);
         }
 
-        final var target = canonicalPair.getRho();
-        Cycle beta = canonicalPair.getBeta();
-        MulticyclePermutation omega = canonicalPair.getOmega();
+        final var target = pair.getRho();
+        Cycle beta = pair.getBeta();
+        MulticyclePermutation omega = pair.getOmega();
         for (final var move : moves) {
             requireApplicable(beta, move);
             omega = PermutationGroups.computeProduct(omega, move.getInverse());
