@@ -157,7 +157,7 @@ public class Oriented9CycleExtensions {
      */
     private static List<Cycle> searchForSorting(final CyclicTargetPair pair,
                                                 final SearchRequirement requirement) {
-        return SortingSearch.searchForSorting(pair, requirement.maxMoves());
+        return SortingSearch.searchForSorting(pair.canonicalRepresentative(), requirement.maxMoves());
     }
 
     static SearchRequirement searchRequirement(final int... companionCycleSizes) {
