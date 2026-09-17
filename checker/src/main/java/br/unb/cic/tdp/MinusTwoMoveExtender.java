@@ -458,7 +458,7 @@ public final class MinusTwoMoveExtender {
                             val preimage = preimageRepresentatives[parentIndex];
 
                             val moves = SortingSearch.searchForSorting(
-                                    preimage, PREIMAGE_MOVE_BUDGET);
+                                    preimage.canonicalRepresentative(), PREIMAGE_MOVE_BUDGET);
                             if (!moves.isEmpty()) {
                                 solved.incrementAndGet();
                             } else {

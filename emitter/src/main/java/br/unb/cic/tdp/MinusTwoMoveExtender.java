@@ -332,7 +332,7 @@ public final class MinusTwoMoveExtender {
             for (final var preimage : preimages) {
                 tasks.add(executor.submit(() -> {
                     final int target = threeNorm(preimage.getOmega());
-                    SortingSearch.searchForSorting(preimage,
+                    SortingSearch.searchForSorting(preimage.canonicalRepresentative(),
                             2 / (PREIMAGE_MOVE_BUDGET / (float) target),
                             PREIMAGE_MOVE_BUDGET);
                 }));
