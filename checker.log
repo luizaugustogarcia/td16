@@ -1,0 +1,909 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------------------< br.unb.cic:checker >-------------------------
+[INFO] Building checker 1.0
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:resources (default-resources) @ checker ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] skip non existing resourceDirectory /home/luiskowada/luiz-projects/td16/checker/src/main/resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.13.0:compile (default-compile) @ checker ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- exec-maven-plugin:3.1.0:java (default-cli) @ checker ---
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - === TD(16) = 9: Proof by Partition Expansions ===
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - Permutations in S_17 (n+1=17), omega in A_17.
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - 
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - == Coverage map: fixed-point-free annotated root types ==
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   33 partitions -> 194 annotated types
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   U:  all-unoriented                                      33
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   T:  contains an oriented 3-cycle                       74
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   E9: selected oriented 9-cycle + oriented even cycle     3
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   O:  remaining selected oriented odd-length cycle        47
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   E:  remaining even-pair route                           37
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   coverage identity: 33 + 74 + 3 + 47 + 37 = 194
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - 
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - == Branch U: all-unoriented root types ==
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - All-unoriented partition-table coverage verified: 33 valid partitions of 17, all accounted for.
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   P1: Partitions impossible with only unoriented cycles (12 cases)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [17] — verified 0 all-unoriented realizable extended-toric classes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [13, 2, 2] — verified 0 all-unoriented realizable extended-toric classes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [12, 3, 2] — verified 0 all-unoriented realizable extended-toric classes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [11, 4, 2] — verified 0 all-unoriented realizable extended-toric classes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [11, 3, 3] — verified 0 all-unoriented realizable extended-toric classes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [10, 5, 2] — verified 0 all-unoriented realizable extended-toric classes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [10, 4, 3] — verified 0 all-unoriented realizable extended-toric classes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [9, 6, 2] — verified 0 all-unoriented realizable extended-toric classes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [9, 5, 3] — verified 0 all-unoriented realizable extended-toric classes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [9, 4, 4] — verified 0 all-unoriented realizable extended-toric classes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [9, 2, 2, 2, 2] — verified 0 all-unoriented realizable extended-toric classes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [8, 3, 2, 2, 2] — verified 0 all-unoriented realizable extended-toric classes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   P2: Unoriented partitions verified by extended-toric-class enumeration + certificate replay (21 cases)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     (9,8)-sequence partitions:
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [8, 7, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [7, 4, 2, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [7, 6, 4]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [6, 5, 2, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [6, 4, 3, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [6, 6, 5]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [5, 4, 4, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [5, 2, 2, 2, 2, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [4, 4, 4, 3, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [4, 3, 2, 2, 2, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [8, 7, 2]: status=started, requiredIncrease=8, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [8, 7, 2]: status=verified, extendedToricClasses=7, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [7, 4, 2, 2, 2]: status=started, requiredIncrease=8, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [7, 4, 2, 2, 2]: status=verified, extendedToricClasses=4800, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [7, 6, 4]: status=started, requiredIncrease=8, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [7, 6, 4]: status=verified, extendedToricClasses=185, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [6, 5, 2, 2, 2]: status=started, requiredIncrease=8, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [6, 5, 2, 2, 2]: status=verified, extendedToricClasses=16500, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [6, 4, 3, 2, 2]: status=started, requiredIncrease=8, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [6, 4, 3, 2, 2]: status=verified, extendedToricClasses=119000, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [6, 6, 5]: status=started, requiredIncrease=8, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [6, 6, 5]: status=verified, extendedToricClasses=253, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [5, 4, 4, 2, 2]: status=started, requiredIncrease=8, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [5, 4, 4, 2, 2]: status=verified, extendedToricClasses=155344, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [5, 2, 2, 2, 2, 2, 2]: status=started, requiredIncrease=8, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [5, 2, 2, 2, 2, 2, 2]: status=verified, extendedToricClasses=65752, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [4, 4, 4, 3, 2]: status=started, requiredIncrease=8, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [4, 4, 4, 3, 2]: status=verified, extendedToricClasses=254430, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [4, 3, 2, 2, 2, 2, 2]: status=started, requiredIncrease=8, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [4, 3, 2, 2, 2, 2, 2]: status=verified, extendedToricClasses=996450, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     (9,7)-sequence partitions:
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [8, 6, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [8, 5, 4]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [7, 7, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [7, 3, 3, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [7, 5, 5]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [6, 3, 3, 3, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [5, 5, 3, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [5, 4, 3, 3, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [4, 4, 3, 3, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [3, 3, 3, 2, 2, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [8, 6, 3]: status=started, requiredIncrease=7, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [8, 6, 3]: status=verified, extendedToricClasses=21, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [8, 5, 4]: status=started, requiredIncrease=7, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [8, 5, 4]: status=verified, extendedToricClasses=35, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [7, 7, 3]: status=started, requiredIncrease=7, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [7, 7, 3]: status=verified, extendedToricClasses=37, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [7, 3, 3, 2, 2]: status=started, requiredIncrease=7, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [7, 3, 3, 2, 2]: status=verified, extendedToricClasses=10896, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [7, 5, 5]: status=started, requiredIncrease=7, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [7, 5, 5]: status=verified, extendedToricClasses=146, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [6, 3, 3, 3, 2]: status=started, requiredIncrease=7, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [6, 3, 3, 3, 2]: status=verified, extendedToricClasses=61200, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [5, 5, 3, 2, 2]: status=started, requiredIncrease=7, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [5, 5, 3, 2, 2]: status=verified, extendedToricClasses=99948, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [5, 4, 3, 3, 2]: status=started, requiredIncrease=7, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [5, 4, 3, 3, 2]: status=verified, extendedToricClasses=485968, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [4, 4, 3, 3, 3]: status=started, requiredIncrease=7, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [4, 4, 3, 3, 3]: status=verified, extendedToricClasses=199054, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [3, 3, 3, 2, 2, 2, 2]: status=started, requiredIncrease=7, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [3, 3, 3, 2, 2, 2, 2]: status=verified, extendedToricClasses=1325494, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     (9,6)-sequence partitions:
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [5, 3, 3, 3, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [5, 3, 3, 3, 3]: status=started, requiredIncrease=6, maxMoves=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.UnorientedCycles - unoriented partition [5, 3, 3, 3, 3]: status=verified, extendedToricClasses=63364, residual=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - 
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - == Branch T: root types with an oriented 3-cycle ==
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   A0: Oriented 3-cycle admits a 2-move → S_14, TD(13)=8, total=9 [trivial]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - 
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - == Branch O: selected oriented odd-length cycles ==
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   A1: Oriented 5-cycle has either a qualifying 2-move or a (3,2)-sequence → total=9 [trivial]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.OddLengthOrientedCycles -     complete oriented-cycle classification: cycleLength=5, visitedNodes=14, survivingCycles=2, orientedCandidateOrbits=1, sequenceSatisfiedCandidateOrbits=1, unsatisfiedCandidateOrbits=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   A2: Oriented 7-cycle has either a qualifying 2-move or a (4,3)-sequence → total=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.OddLengthOrientedCycles -     complete oriented-cycle classification: cycleLength=7, visitedNodes=80, survivingCycles=2, orientedCandidateOrbits=1, sequenceSatisfiedCandidateOrbits=1, unsatisfiedCandidateOrbits=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   A3.0: Classify surviving oriented 9-cycle candidates without a (5,4)-sequence
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.OddLengthOrientedCycles -     complete oriented-cycle classification: cycleLength=9, visitedNodes=506, survivingCycles=3, orientedCandidateOrbits=2, sequenceSatisfiedCandidateOrbits=1, unsatisfiedCandidateOrbits=1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.OddLengthOrientedCycles -       unsatisfied candidate orbit: omega=(0 5 1 6 2 7 3 8 4), beta=(0 1 2 3 4 5 6 7 8), braceletKey=[1_0,1_2,1_4,1_6,1_8,1_1,1_3,1_5,1_7]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     A3.0 unique exceptional candidate orbit verified: omega=(0 5 1 6 2 7 3 8 4), beta=(0 1 2 3 4 5 6 7 8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   A3: Exceptional oriented 9-cycle with unoriented companions: [9-O,6-U,2-U], [9-O,5-U,3-U], [9-O,4-U,4-U], [9-O,2-U,2-U,2-U,2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.Oriented9CycleExtensions -     partition [9, 6, 2]: generatedExtensions=20160, cyclicTargets=527, solved=527, residual=0, sequence=(9,8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.Oriented9CycleExtensions -     partition [9, 5, 3]: generatedExtensions=40040, cyclicTargets=2096, solved=2096, residual=0, sequence=(9,7)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.Oriented9CycleExtensions -     partition [9, 4, 4]: generatedExtensions=25410, cyclicTargets=1643, solved=1643, residual=0, sequence=(9,8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.Oriented9CycleExtensions -     partition [9, 2, 2, 2, 2]: generatedExtensions=75950, cyclicTargets=12732, solved=12732, residual=0, sequence=(9,8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   A4: Oriented 11-cycle has either a qualifying 2-move or a (6,5)-sequence → total=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.OddLengthOrientedCycles -     complete oriented-cycle classification: cycleLength=11, visitedNodes=3391, survivingCycles=2, orientedCandidateOrbits=1, sequenceSatisfiedCandidateOrbits=1, unsatisfiedCandidateOrbits=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   A5: Oriented 13-cycle has either a qualifying 2-move or a (7,6)-sequence → total=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.OddLengthOrientedCycles -     complete oriented-cycle classification: cycleLength=13, visitedNodes=23619, survivingCycles=4, orientedCandidateOrbits=3, sequenceSatisfiedCandidateOrbits=3, unsatisfiedCandidateOrbits=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   A6: No valid partition of 17 has a 15-cycle [parity: [15,2] has 1 even part]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   A7: Oriented 17-cycle has either a qualifying 2-move or a (9,8)-sequence → total=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.OddLengthOrientedCycles -     complete oriented-cycle classification: cycleLength=17, visitedNodes=1243098, survivingCycles=4, orientedCandidateOrbits=3, sequenceSatisfiedCandidateOrbits=3, unsatisfiedCandidateOrbits=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - 
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - == First-step branches and contracted successors ==
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   O: expanding 47 oriented odd-length-cycle root types
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [17-O] -> apply A7
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A7 [9 + tail=0 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 4 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [15, 1, 1]: canonicalAnnotations=2
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [13, 3, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [13, 3, 1]: canonicalAnnotations=4, pending=4, previouslyResolved=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [13-U, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [13, 3, 1]: fixedPoints=1, reduced=[13, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [13-U, 3-U]: extendedToricClasses=0, solved=0, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [13-U, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [13-O, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [13, 3, 1]: fixedPoints=1, reduced=[13, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [13-O, 3-U]: extendedToricClasses=778423808, solved=778423808, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [13-O, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [11, 5, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [11, 5, 1]: canonicalAnnotations=4, pending=4, previouslyResolved=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [11-U, 5-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [11, 5, 1]: fixedPoints=1, reduced=[11, 5]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [11-U, 5-U]: extendedToricClasses=0, solved=0, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [11-U, 5-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [11, 5, 1]: fixedPoints=1, reduced=[11, 5]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [11-U, 5-O]: extendedToricClasses=0, solved=0, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [11-O, 5-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [11, 5, 1]: fixedPoints=1, reduced=[11, 5]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [11-O, 5-U]: extendedToricClasses=14976176, solved=14976176, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [11-O, 5-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [11, 5, 1]: fixedPoints=1, reduced=[11, 5]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [11-O, 5-O]: extendedToricClasses=1384025296, solved=1384024801, residual=495, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [9, 7, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 7, 1]: canonicalAnnotations=4, pending=4, previouslyResolved=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [9-U, 7-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [9, 7, 1]: fixedPoints=1, reduced=[9, 7]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [9-U, 7-U]: extendedToricClasses=0, solved=0, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [9-U, 7-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [9, 7, 1]: fixedPoints=1, reduced=[9, 7]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [9-U, 7-O]: extendedToricClasses=0, solved=0, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [9-O, 7-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [9, 7, 1]: fixedPoints=1, reduced=[9, 7]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [9-O, 7-U]: extendedToricClasses=30624, solved=30624, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [9-O, 7-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [9, 7, 1]: fixedPoints=1, reduced=[9, 7]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [9-O, 7-O]: extendedToricClasses=1221159648, solved=1221158107, residual=1541, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [13-O, 2-U, 2-U] -> apply A5
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A5 [7 + TD(3)=2 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 3 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [11, 2, 2, 1, 1]: canonicalAnnotations=2
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [9, 3, 2, 2, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 3, 2, 2, 1]: canonicalAnnotations=4, pending=4, previouslyResolved=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [9-U, 3-U, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [9, 3, 2, 2, 1]: fixedPoints=1, reduced=[9, 3, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [9-U, 3-U, 2-U, 2-U]: extendedToricClasses=0, solved=0, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [9-U, 3-O, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [9-O, 3-U, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [9, 3, 2, 2, 1]: fixedPoints=1, reduced=[9, 3, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [9-O, 3-U, 2-U, 2-U]: extendedToricClasses=139921988, solved=139921988, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [9-O, 3-O, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [7, 5, 2, 2, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 5, 2, 2, 1]: canonicalAnnotations=4, pending=4, previouslyResolved=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-U, 5-U, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [7, 5, 2, 2, 1]: fixedPoints=1, reduced=[7, 5, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [7-U, 5-U, 2-U, 2-U]: extendedToricClasses=240, solved=240, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-U, 5-O, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [7, 5, 2, 2, 1]: fixedPoints=1, reduced=[7, 5, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [7-U, 5-O, 2-U, 2-U]: extendedToricClasses=5280, solved=5280, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-O, 5-U, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [7, 5, 2, 2, 1]: fixedPoints=1, reduced=[7, 5, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [7-O, 5-U, 2-U, 2-U]: extendedToricClasses=3052152, solved=3052152, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-O, 5-O, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [7, 5, 2, 2, 1]: fixedPoints=1, reduced=[7, 5, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [7-O, 5-O, 2-U, 2-U]: extendedToricClasses=267299646, solved=267299646, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [11-O, 4-U, 2-U] -> apply A4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A4 [6 + TD(5)=3 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 3 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [9, 4, 2, 1, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [7, 4, 3, 2, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 4, 3, 2, 1]: canonicalAnnotations=8, pending=8, previouslyResolved=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-U, 4-U, 3-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [7, 4, 3, 2, 1]: fixedPoints=1, reduced=[7, 4, 3, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [7-U, 4-U, 3-U, 2-U]: extendedToricClasses=900, solved=900, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-U, 4-U, 3-O, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-U, 4-O, 3-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [7, 4, 3, 2, 1]: fixedPoints=1, reduced=[7, 4, 3, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [7-U, 4-O, 3-U, 2-U]: extendedToricClasses=4500, solved=4500, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-U, 4-O, 3-O, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-O, 4-U, 3-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [7, 4, 3, 2, 1]: fixedPoints=1, reduced=[7, 4, 3, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [7-O, 4-U, 3-U, 2-U]: extendedToricClasses=16910100, solved=16910100, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-O, 4-U, 3-O, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-O, 4-O, 3-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [7, 4, 3, 2, 1]: fixedPoints=1, reduced=[7, 4, 3, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [7-O, 4-O, 3-U, 2-U]: extendedToricClasses=163455300, solved=163455300, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-O, 4-O, 3-O, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [5, 5, 4, 2, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [5, 5, 4, 2, 1]: canonicalAnnotations=6, pending=6, previouslyResolved=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 5-U, 4-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 5, 4, 2, 1]: fixedPoints=1, reduced=[5, 5, 4, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-U, 5-U, 4-U, 2-U]: extendedToricClasses=4890, solved=4890, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 5-U, 4-O, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 5, 4, 2, 1]: fixedPoints=1, reduced=[5, 5, 4, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-U, 5-U, 4-O, 2-U]: extendedToricClasses=30811, solved=30811, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 5-O, 4-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 5, 4, 2, 1]: fixedPoints=1, reduced=[5, 5, 4, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-U, 5-O, 4-U, 2-U]: extendedToricClasses=459990, solved=459990, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 5-O, 4-O, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 5, 4, 2, 1]: fixedPoints=1, reduced=[5, 5, 4, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-U, 5-O, 4-O, 2-U]: extendedToricClasses=3663006, solved=3663006, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-O, 5-O, 4-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 5, 4, 2, 1]: fixedPoints=1, reduced=[5, 5, 4, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-O, 5-O, 4-U, 2-U]: extendedToricClasses=16123356, solved=16123356, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-O, 5-O, 4-O, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 5, 4, 2, 1]: fixedPoints=1, reduced=[5, 5, 4, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-O, 5-O, 4-O, 2-U]: extendedToricClasses=170398479, solved=170398479, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [11-O, 4-O, 2-U] -> apply A4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A4 [6 + TD(5)=3 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 3 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [9, 4, 2, 1, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 4, 2, 1, 1]: all 4 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [7, 4, 3, 2, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 4, 3, 2, 1]: canonicalAnnotations=8, pending=0, previouslyResolved=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [5, 5, 4, 2, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [5, 5, 4, 2, 1]: canonicalAnnotations=6, pending=0, previouslyResolved=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [11-O, 3-U, 3-U] -> apply A4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A4 [6 + TD(5)=3 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 3 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [9, 3, 3, 1, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [7, 3, 3, 3, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 3, 3, 3, 1]: canonicalAnnotations=8, pending=8, previouslyResolved=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-U, 3-U, 3-U, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [7, 3, 3, 3, 1]: fixedPoints=1, reduced=[7, 3, 3, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [7-U, 3-U, 3-U, 3-U]: extendedToricClasses=243, solved=243, residual=0, requiredIncrease=6, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-U, 3-U, 3-U, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-U, 3-U, 3-O, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-U, 3-O, 3-O, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-O, 3-U, 3-U, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [7, 3, 3, 3, 1]: fixedPoints=1, reduced=[7, 3, 3, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [7-O, 3-U, 3-U, 3-U]: extendedToricClasses=4657685, solved=4657685, residual=0, requiredIncrease=6, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-O, 3-U, 3-U, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-O, 3-U, 3-O, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [7-O, 3-O, 3-O, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [5, 5, 3, 3, 1]: canonicalAnnotations=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [5, 5, 3, 3, 1]: canonicalAnnotations=9, pending=9, previouslyResolved=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 5-U, 3-U, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 5, 3, 3, 1]: fixedPoints=1, reduced=[5, 5, 3, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-U, 5-U, 3-U, 3-U]: extendedToricClasses=3959, solved=3959, residual=0, requiredIncrease=6, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 5-U, 3-U, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 5-U, 3-O, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 5-O, 3-U, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 5, 3, 3, 1]: fixedPoints=1, reduced=[5, 5, 3, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-U, 5-O, 3-U, 3-U]: extendedToricClasses=372456, solved=372456, residual=0, requiredIncrease=6, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 5-O, 3-U, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 5-O, 3-O, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-O, 5-O, 3-U, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 5, 3, 3, 1]: fixedPoints=1, reduced=[5, 5, 3, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-O, 5-O, 3-U, 3-U]: extendedToricClasses=13496745, solved=13496745, residual=0, requiredIncrease=6, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-O, 5-O, 3-U, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-O, 5-O, 3-O, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [10-U, 5-O, 2-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [10, 3, 2, 1, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [10-O, 5-O, 2-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [10, 3, 2, 1, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [10, 3, 2, 1, 1]: all 4 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [9-O, 6-U, 2-U] -> apply A3
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [nonexceptional sequence] resolved by A3 [5 + TD(7)=4 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [exceptional class] resolved by the A3 extension verification
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 2 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [7, 6, 2, 1, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [6, 5, 3, 2, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [6, 5, 3, 2, 1]: canonicalAnnotations=8, pending=8, previouslyResolved=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-U, 5-U, 3-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [6, 5, 3, 2, 1]: fixedPoints=1, reduced=[6, 5, 3, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [6-U, 5-U, 3-U, 2-U]: extendedToricClasses=3700, solved=3700, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-U, 5-U, 3-O, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-U, 5-O, 3-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [6, 5, 3, 2, 1]: fixedPoints=1, reduced=[6, 5, 3, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [6-U, 5-O, 3-U, 2-U]: extendedToricClasses=151700, solved=151700, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-U, 5-O, 3-O, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-O, 5-U, 3-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [6, 5, 3, 2, 1]: fixedPoints=1, reduced=[6, 5, 3, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [6-O, 5-U, 3-U, 2-U]: extendedToricClasses=2094620, solved=2094620, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-O, 5-U, 3-O, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-O, 5-O, 3-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [6, 5, 3, 2, 1]: fixedPoints=1, reduced=[6, 5, 3, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [6-O, 5-O, 3-U, 2-U]: extendedToricClasses=166055740, solved=166055740, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-O, 5-O, 3-O, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [9-U, 5-O, 3-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [9, 3, 3, 1, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 3, 3, 1, 1]: all 6 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [9-O, 5-U, 3-U] -> apply A3
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [nonexceptional sequence] resolved by A3 [5 + TD(7)=4 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [exceptional class] resolved by the A3 extension verification
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 2 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [7, 5, 3, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [5, 5, 3, 3, 1]: canonicalAnnotations=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [5, 5, 3, 3, 1]: canonicalAnnotations=9, pending=0, previouslyResolved=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [9-O, 5-O, 3-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [9, 3, 3, 1, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 3, 3, 1, 1]: all 6 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [9-O, 4-U, 4-U] -> apply A3
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [nonexceptional sequence] resolved by A3 [5 + TD(7)=4 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [exceptional class] resolved by the A3 extension verification
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 2 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [7, 4, 4, 1, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [5, 4, 4, 3, 1]: canonicalAnnotations=12
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [5, 4, 4, 3, 1]: canonicalAnnotations=12, pending=12, previouslyResolved=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 4-U, 4-U, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 4, 4, 3, 1]: fixedPoints=1, reduced=[5, 4, 4, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-U, 4-U, 4-U, 3-U]: extendedToricClasses=11908, solved=11908, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 4-U, 4-U, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 4-U, 4-O, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 4, 4, 3, 1]: fixedPoints=1, reduced=[5, 4, 4, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-U, 4-U, 4-O, 3-U]: extendedToricClasses=159996, solved=159996, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 4-U, 4-O, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 4-O, 4-O, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 4, 4, 3, 1]: fixedPoints=1, reduced=[5, 4, 4, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-U, 4-O, 4-O, 3-U]: extendedToricClasses=604712, solved=604712, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 4-O, 4-O, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-O, 4-U, 4-U, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 4, 4, 3, 1]: fixedPoints=1, reduced=[5, 4, 4, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-O, 4-U, 4-U, 3-U]: extendedToricClasses=619800, solved=619800, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-O, 4-U, 4-U, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-O, 4-U, 4-O, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 4, 4, 3, 1]: fixedPoints=1, reduced=[5, 4, 4, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-O, 4-U, 4-O, 3-U]: extendedToricClasses=10352352, solved=10352352, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-O, 4-U, 4-O, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-O, 4-O, 4-O, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 4, 4, 3, 1]: fixedPoints=1, reduced=[5, 4, 4, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-O, 4-O, 4-O, 3-U]: extendedToricClasses=51541792, solved=51541792, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-O, 4-O, 4-O, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [9-O, 2-U, 2-U, 2-U, 2-U] -> apply A3
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [nonexceptional sequence] resolved by A3 [5 + TD(7)=4 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [exceptional class] resolved by the A3 extension verification
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 2 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [7, 2, 2, 2, 2, 1, 1]: canonicalAnnotations=2
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [5, 3, 2, 2, 2, 2, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [5, 3, 2, 2, 2, 2, 1]: canonicalAnnotations=4, pending=4, previouslyResolved=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 3-U, 2-U, 2-U, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 3, 2, 2, 2, 2, 1]: fixedPoints=1, reduced=[5, 3, 2, 2, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-U, 3-U, 2-U, 2-U, 2-U, 2-U]: extendedToricClasses=68352, solved=68352, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-U, 3-O, 2-U, 2-U, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-O, 3-U, 2-U, 2-U, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [5, 3, 2, 2, 2, 2, 1]: fixedPoints=1, reduced=[5, 3, 2, 2, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [5-O, 3-U, 2-U, 2-U, 2-U, 2-U]: extendedToricClasses=5150104, solved=5150104, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [5-O, 3-O, 2-U, 2-U, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [8-U, 7-O, 2-U] -> apply A2
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A2 [4 + TD(9)=5 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 2 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [8, 5, 2, 1, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [8, 3, 3, 2, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [8, 3, 3, 2, 1]: canonicalAnnotations=6, pending=6, previouslyResolved=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [8-U, 3-U, 3-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [8, 3, 3, 2, 1]: fixedPoints=1, reduced=[8, 3, 3, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [8-U, 3-U, 3-U, 2-U]: extendedToricClasses=0, solved=0, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [8-U, 3-U, 3-O, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [8-U, 3-O, 3-O, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [8-O, 3-U, 3-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [8, 3, 3, 2, 1]: fixedPoints=1, reduced=[8, 3, 3, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [8-O, 3-U, 3-U, 2-U]: extendedToricClasses=43296998, solved=43296998, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [8-O, 3-U, 3-O, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [8-O, 3-O, 3-O, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [8-O, 7-O, 2-U] -> apply A2
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A2 [4 + TD(9)=5 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 2 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [8, 5, 2, 1, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [8, 5, 2, 1, 1]: all 4 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [8, 3, 3, 2, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [8, 3, 3, 2, 1]: canonicalAnnotations=6, pending=0, previouslyResolved=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [8-U, 5-O, 4-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [8, 4, 3, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [8-U, 5-O, 4-O] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [8, 4, 3, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [8, 4, 3, 1, 1]: all 8 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [8-O, 5-O, 4-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [8, 4, 3, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [8, 4, 3, 1, 1]: all 8 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [8-O, 5-O, 4-O] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [8, 4, 3, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [8, 4, 3, 1, 1]: all 8 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-U, 7-O, 3-U] -> apply A2
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A2 [4 + TD(9)=5 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 2 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [7, 5, 3, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 5, 3, 1, 1]: all 8 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [7, 3, 3, 3, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 3, 3, 3, 1]: canonicalAnnotations=8, pending=0, previouslyResolved=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-O, 7-O, 3-U] -> apply A2
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A2 [4 + TD(9)=5 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 2 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [7, 5, 3, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 5, 3, 1, 1]: all 8 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [7, 3, 3, 3, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 3, 3, 3, 1]: canonicalAnnotations=8, pending=0, previouslyResolved=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-O, 6-U, 4-U] -> apply A2
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A2 [4 + TD(9)=5 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 2 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [6, 5, 4, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [6, 4, 3, 3, 1]: canonicalAnnotations=12
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [6, 4, 3, 3, 1]: canonicalAnnotations=12, pending=12, previouslyResolved=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-U, 4-U, 3-U, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [6, 4, 3, 3, 1]: fixedPoints=1, reduced=[6, 4, 3, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [6-U, 4-U, 3-U, 3-U]: extendedToricClasses=4260, solved=4260, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-U, 4-U, 3-U, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-U, 4-U, 3-O, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-U, 4-O, 3-U, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [6, 4, 3, 3, 1]: fixedPoints=1, reduced=[6, 4, 3, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [6-U, 4-O, 3-U, 3-U]: extendedToricClasses=26626, solved=26626, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-U, 4-O, 3-U, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-U, 4-O, 3-O, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-O, 4-U, 3-U, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [6, 4, 3, 3, 1]: fixedPoints=1, reduced=[6, 4, 3, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [6-O, 4-U, 3-U, 3-U]: extendedToricClasses=2868805, solved=2868805, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-O, 4-U, 3-U, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-O, 4-U, 3-O, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-O, 4-O, 3-U, 3-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [6, 4, 3, 3, 1]: fixedPoints=1, reduced=[6, 4, 3, 3]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [6-O, 4-O, 3-U, 3-U]: extendedToricClasses=25982773, solved=25982773, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-O, 4-O, 3-U, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [6-O, 4-O, 3-O, 3-O]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-O, 6-U, 4-O] -> apply A2
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A2 [4 + TD(9)=5 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 2 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [6, 5, 4, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [6, 5, 4, 1, 1]: all 8 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [6, 4, 3, 3, 1]: canonicalAnnotations=12
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [6, 4, 3, 3, 1]: canonicalAnnotations=12, pending=0, previouslyResolved=12
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-O, 6-O, 4-U] -> apply A2
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A2 [4 + TD(9)=5 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 2 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [6, 5, 4, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [6, 5, 4, 1, 1]: all 8 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [6, 4, 3, 3, 1]: canonicalAnnotations=12
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [6, 4, 3, 3, 1]: canonicalAnnotations=12, pending=0, previouslyResolved=12
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-O, 6-O, 4-O] -> apply A2
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A2 [4 + TD(9)=5 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 2 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [6, 5, 4, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [6, 5, 4, 1, 1]: all 8 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [6, 4, 3, 3, 1]: canonicalAnnotations=12
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [6, 4, 3, 3, 1]: canonicalAnnotations=12, pending=0, previouslyResolved=12
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-U, 5-U, 5-O] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [7, 5, 3, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 5, 3, 1, 1]: all 8 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-U, 5-O, 5-O] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [7, 5, 3, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 5, 3, 1, 1]: all 8 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-O, 5-U, 5-U] -> apply A2
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A2 [4 + TD(9)=5 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 2 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [5, 5, 5, 1, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [5, 5, 3, 3, 1]: canonicalAnnotations=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [5, 5, 3, 3, 1]: canonicalAnnotations=9, pending=0, previouslyResolved=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-O, 5-U, 5-O] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [7, 5, 3, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 5, 3, 1, 1]: all 8 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-O, 5-O, 5-O] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [7, 5, 3, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 5, 3, 1, 1]: all 8 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-O, 4-U, 2-U, 2-U, 2-U] -> apply A2
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A2 [4 + TD(9)=5 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 2 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [5, 4, 2, 2, 2, 1, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [4, 3, 3, 2, 2, 2, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [4, 3, 3, 2, 2, 2, 1]: canonicalAnnotations=6, pending=6, previouslyResolved=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [4-U, 3-U, 3-U, 2-U, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [4, 3, 3, 2, 2, 2, 1]: fixedPoints=1, reduced=[4, 3, 3, 2, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [4-U, 3-U, 3-U, 2-U, 2-U, 2-U]: extendedToricClasses=362768, solved=362768, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [4-U, 3-U, 3-O, 2-U, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [4-U, 3-O, 3-O, 2-U, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [4-O, 3-U, 3-U, 2-U, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [4, 3, 3, 2, 2, 2, 1]: fixedPoints=1, reduced=[4, 3, 3, 2, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [4-O, 3-U, 3-U, 2-U, 2-U, 2-U]: extendedToricClasses=3241841, solved=3241841, residual=0, requiredIncrease=7, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [4-O, 3-U, 3-O, 2-U, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [4-O, 3-O, 3-O, 2-U, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-O, 4-O, 2-U, 2-U, 2-U] -> apply A2
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A2 [4 + TD(9)=5 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 2 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [5, 4, 2, 2, 2, 1, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [5, 4, 2, 2, 2, 1, 1]: all 4 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [4, 3, 3, 2, 2, 2, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [4, 3, 3, 2, 2, 2, 1]: canonicalAnnotations=6, pending=0, previouslyResolved=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-O, 3-U, 3-U, 2-U, 2-U] -> apply A2
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A2 [4 + TD(9)=5 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 2 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [5, 3, 3, 2, 2, 1, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [3, 3, 3, 3, 2, 2, 1]: canonicalAnnotations=5
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [3, 3, 3, 3, 2, 2, 1]: canonicalAnnotations=5, pending=5, previouslyResolved=0
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [3-U, 3-U, 3-U, 3-U, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               exhaustive successor check (maxMoves=8)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                 successor [3, 3, 3, 3, 2, 2, 1]: fixedPoints=1, reduced=[3, 3, 3, 3, 2, 2]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.RemainingSuccessorsSolver -                   case [3-U, 3-U, 3-U, 3-U, 2-U, 2-U]: extendedToricClasses=147022, solved=147022, residual=0, requiredIncrease=6, maxMoves=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [3-U, 3-U, 3-U, 3-O, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [3-U, 3-U, 3-O, 3-O, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [3-U, 3-O, 3-O, 3-O, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -             case [3-O, 3-O, 3-O, 3-O, 2-U, 2-U]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -               direct: A0 [2 + TD(12)=7 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [6-U, 6-U, 5-O] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [6, 6, 3, 1, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [6-U, 6-O, 5-O] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [6, 6, 3, 1, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [6, 6, 3, 1, 1]: all 6 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [6-O, 6-O, 5-O] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [6, 6, 3, 1, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [6, 6, 3, 1, 1]: all 6 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [6-U, 5-O, 2-U, 2-U, 2-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [6, 3, 2, 2, 2, 1, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [6-O, 5-O, 2-U, 2-U, 2-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [6, 3, 2, 2, 2, 1, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [6, 3, 2, 2, 2, 1, 1]: all 4 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [5-U, 5-O, 3-U, 2-U, 2-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [5, 3, 3, 2, 2, 1, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [5, 3, 3, 2, 2, 1, 1]: all 6 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [5-O, 5-O, 3-U, 2-U, 2-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [5, 3, 3, 2, 2, 1, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [5, 3, 3, 2, 2, 1, 1]: all 6 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [5-O, 4-U, 4-U, 2-U, 2-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [4, 4, 3, 2, 2, 1, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [5-O, 4-U, 4-O, 2-U, 2-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [4, 4, 3, 2, 2, 1, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [4, 4, 3, 2, 2, 1, 1]: all 6 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [5-O, 4-O, 4-O, 2-U, 2-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [4, 4, 3, 2, 2, 1, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [4, 4, 3, 2, 2, 1, 1]: all 6 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [5-O, 4-U, 3-U, 3-U, 2-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [4, 3, 3, 3, 2, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [5-O, 4-O, 3-U, 3-U, 2-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [4, 3, 3, 3, 2, 1, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [4, 3, 3, 3, 2, 1, 1]: all 8 annotations previously resolved
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [5-O, 3-U, 3-U, 3-U, 3-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [3, 3, 3, 3, 3, 1, 1]: canonicalAnnotations=6
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [5-O, 2-U, 2-U, 2-U, 2-U, 2-U, 2-U] -> apply A1
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [sequence] resolved by A1 [3 + TD(11)=6 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [2-move successors] 1 case(s)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -         successor [3, 2, 2, 2, 2, 2, 2, 1, 1]: canonicalAnnotations=2
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           direct: at least two fixed points [1 + TD(14)=8 = 9]
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   E9: expanding 3 selected-9/even precedence root types
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [9-O, 6-O, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [9, 7, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 7, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [9-O, 4-U, 4-O] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [9, 7, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 7, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [9-O, 4-O, 4-O] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [9, 7, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 7, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   E: expanding 37 remaining even-pair root types
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [12-O, 3-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [13, 3, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [13, 3, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [11-U, 4-O, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [11, 5, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [11, 5, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [10-O, 5-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [11, 5, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [11, 5, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [10-U, 4-O, 3-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [13, 3, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [13, 3, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [10-O, 4-U, 3-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [13, 3, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [13, 3, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [10-O, 4-O, 3-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [13, 3, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [13, 3, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [9-U, 6-O, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [9, 7, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 7, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [9-U, 4-U, 4-O] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [9, 7, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 7, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [9-U, 4-O, 4-O] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [9, 7, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 7, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [8-O, 7-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [9, 7, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 7, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [8-U, 6-O, 3-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [13, 3, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [13, 3, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [8-O, 6-U, 3-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [13, 3, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [13, 3, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [8-O, 6-O, 3-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [13, 3, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [13, 3, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [8-U, 5-U, 4-O] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [11, 5, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [11, 5, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [8-O, 5-U, 4-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [11, 5, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [11, 5, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [8-O, 5-U, 4-O] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [11, 5, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [11, 5, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [8-O, 3-U, 2-U, 2-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [9, 3, 2, 2, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 3, 2, 2, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-U, 6-U, 4-O] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [9, 7, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 7, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-U, 6-O, 4-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [9, 7, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 7, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-U, 6-O, 4-O] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [9, 7, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 7, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [7-U, 4-O, 2-U, 2-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [7, 5, 2, 2, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 5, 2, 2, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [6-U, 6-O, 5-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [11, 5, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [11, 5, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [6-O, 6-O, 5-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [11, 5, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [11, 5, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [6-O, 5-U, 2-U, 2-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [7, 5, 2, 2, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 5, 2, 2, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [6-U, 4-O, 3-U, 2-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [9, 3, 2, 2, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 3, 2, 2, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [6-O, 4-U, 3-U, 2-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [9, 3, 2, 2, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 3, 2, 2, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [6-O, 4-O, 3-U, 2-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [9, 3, 2, 2, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [9, 3, 2, 2, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [6-O, 3-U, 3-U, 3-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [7, 3, 3, 3, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 3, 3, 3, 1]: canonicalAnnotations=8, pending=0, previouslyResolved=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [5-U, 4-U, 4-O, 2-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [7, 5, 2, 2, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 5, 2, 2, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [5-U, 4-O, 4-O, 2-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [7, 5, 2, 2, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 5, 2, 2, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [5-U, 4-O, 3-U, 3-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [5, 5, 3, 3, 1]: canonicalAnnotations=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [5, 5, 3, 3, 1]: canonicalAnnotations=9, pending=0, previouslyResolved=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [4-U, 4-U, 4-O, 3-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [7, 4, 3, 2, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 4, 3, 2, 1]: canonicalAnnotations=8, pending=0, previouslyResolved=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [4-U, 4-O, 4-O, 3-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [7, 4, 3, 2, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 4, 3, 2, 1]: canonicalAnnotations=8, pending=0, previouslyResolved=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [4-O, 4-O, 4-O, 3-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [7, 4, 3, 2, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 4, 3, 2, 1]: canonicalAnnotations=8, pending=0, previouslyResolved=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [4-U, 4-O, 3-U, 3-U, 3-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [7, 3, 3, 3, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 3, 3, 3, 1]: canonicalAnnotations=8, pending=0, previouslyResolved=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [4-O, 4-O, 3-U, 3-U, 3-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [7, 3, 3, 3, 1]: canonicalAnnotations=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [7, 3, 3, 3, 1]: canonicalAnnotations=8, pending=0, previouslyResolved=8
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -     [4-O, 3-U, 2-U, 2-U, 2-U, 2-U, 2-U] -> apply strengthened even-pair join
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -       [even-pair successor] [5, 3, 2, 2, 2, 2, 1]: canonicalAnnotations=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -           successor [5, 3, 2, 2, 2, 2, 1]: canonicalAnnotations=4, pending=0, previouslyResolved=4
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - 
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - == Residual obstructions: reconstruct and sort their avoidance preimages ==
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   2036 residual obstructions collected from the eight-move successor searches
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.MinusTwoMoveExtender -   residual-obstruction classes: 2036 (matches reference corpus)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.MinusTwoMoveExtender -   [11-O,5-O] residual-obstruction classes: 495 (matches reference corpus)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.MinusTwoMoveExtender -   [9-O,7-O] residual-obstruction classes: 1541 (matches reference corpus)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.MinusTwoMoveExtender -   applicable even-pair reconstruction supports: 1920192 (matches reference corpus)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.MinusTwoMoveExtender -   even-pair avoidance-preimage classes: 178439 (matches reference corpus)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.MinusTwoMoveExtender -   1920192 applicable even-pair reconstruction supports yielded 178439 avoidance-preimage classes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.MinusTwoMoveExtender -   Reconstructing avoidance preimages of 2036 residual-obstruction classes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.MinusTwoMoveExtender -   odd-split avoidance-preimage classes: 1339101 (matches reference corpus)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.MinusTwoMoveExtender -   1988928 odd-split reconstruction applications yielded 1339101 avoidance-preimage classes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.MinusTwoMoveExtender -   overlap between odd-split and even-pair preimage classes: 0 (matches reference corpus)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.MinusTwoMoveExtender -   distinct avoidance-preimage classes: 1517540 (matches reference corpus)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.MinusTwoMoveExtender -   avoidance-preimage union: 1339101 odd-split + 178439 even-pair - 0 overlap = 1517540 classes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.MinusTwoMoveExtender -   All 1517540 avoidance-preimage classes represented and sorted independently within nine moves
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - 
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - === PROOF SUMMARY ===
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - Stage checks: 19 verified, 0 WIP, 0 TODO
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] C0: 33 fixed-point-free partitions and 194 annotated root types — Every admissible fixed-point-free partition and canonical O/U annotation is generated once
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] C1: root routing 33 + 74 + 3 + 47 + 37 = 194 — The five priority routes are disjoint and cover every annotated root type
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] P1: 12 impossible unoriented partitions — The all-unoriented realizable extended-toric-class count is zero
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] P2: 21 unoriented partitions — UnorientedCycles (extended-toric classes + certificate replay)
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] A0: oriented 3-cycle → 2-move, reduce to S_14 — Trivial: 2-move fixes 3 symbols, S_17 → S_14; TD(13)=8, total 1+8=9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] A1: oriented 5-cycle → 2-move or (3,2)-seq — Trivial: either a 2-move fixes two symbols or a (3,2)-sequence fixes all 5 symbols; in either case the total is at most 9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] A2: oriented 7-cycle → 2-move or (4,3)-seq — Certificate replay verifies every surviving candidate; the direct sequence fixes 7 symbols, so the total is at most 9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] A3.0: unique exceptional oriented 9-cycle — Independent target-9 search leaves exactly one residual candidate orbit, Gamma_9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] A3: exceptional 9-cycle with all valid unoriented companion partitions — Oriented9CycleExtensions
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] A4: oriented 11-cycle → 2-move or (6,5)-seq — Certificate replay verifies every surviving candidate; the direct sequence fixes 11 symbols, so the total is at most 9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] A5: oriented 13-cycle → 2-move or (7,6)-seq — Certificate replay verifies every surviving candidate; the direct sequence fixes 13 symbols, so the total is at most 9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] A6: no oriented 15-cycle in A_17 — Parity: [15,2] has 1 even part (odd count), violates A_17 constraint
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] A7: oriented 17-cycle → 2-move or (9,8)-seq — Certificate replay verifies every surviving candidate; the direct sequence fixes all 17 symbols, so the total is 9
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] C2: 33 all-unoriented and 74 oriented-3 root types closed directly — The two direct root routes contain 107 of the 194 annotated types
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] C3: 47 odd-cycle expansions and 40 even-pair expansions — The expanded routes contain the remaining 87 annotated root types; the even-pair count is 3 precedence routes plus 37 remaining routes
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] C4: every first-step successor enters a direct closure or the shared tail — At least two fixed points and oriented 3-cycles close directly; every remaining annotation enters a one-fixed-point successor search
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] C5: 52 distinct one-fixed-point successor searches — The searches generated 4511223147 extended-toric classes: 4511221111 sorted within eight moves and 2036 retained as residual obstructions
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] C6: 0 deferred annotated cases after one expansion — Every selected first move reaches a direct closure or the shared one-fixed-point tail
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 -   [VERIFIED] C7: 2036 residual obstructions avoided through 1517540 distinct avoidance-preimage classes — The preimage union contains 1339101 odd-cycle-split classes and 178439 even-pair-join classes, with 0 classes in both sets; one representative of every distinct class has an independent sorting sequence of length at most nine
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - ALL CASES RESOLVED. TD(16) = 9. QED.
+[br.unb.cic.tdp.ProofTD16.main()] INFO br.unb.cic.tdp.ProofTD16 - Proof elapsed time: 2h 44m 57.952s
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  02:44 h
+[INFO] Finished at: 2026-09-18T04:43:26-03:00
+[INFO] ------------------------------------------------------------------------

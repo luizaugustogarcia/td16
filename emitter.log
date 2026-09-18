@@ -1,0 +1,85 @@
+Picked up JAVA_TOOL_OPTIONS: -Xmx128G -XX:+UseParallelGC
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------------------< br.unb.cic:emitter >-------------------------
+[INFO] Building emitter 1.0
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- exec-maven-plugin:3.1.0:exec (cmake-configure) @ emitter ---
+-- CUDA architectures: 60-real;70-real;75-real;80-real;86-real;86-virtual
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/luiskowada/luiz-projects/td16/emitter/target/native
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:resources (default-resources) @ emitter ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 1 resource
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.13.0:compile (default-compile) @ emitter ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- exec-maven-plugin:3.1.0:exec (cmake-build) @ emitter ---
+[100%] Built target tdp1375_jni
+[INFO] 
+[INFO] --- exec-maven-plugin:3.1.0:exec (default-cli) @ emitter ---
+Picked up JAVA_TOOL_OPTIONS: -Xmx128G -XX:+UseParallelGC
+INFO Initialized GPU sorting search: devices=[0, 1, 2, 3], slots/device=16, total slots=64, pending capacity=576, additional queue=512, queue budget/slot=850 MiB
+INFO unoriented partition [8, 7, 2]: status=started, requiredIncrease=8, maxMoves=9
+INFO unoriented partition [8, 7, 2]: status=verified, extendedToricClasses=7, residual=0
+INFO unoriented partition [7, 4, 2, 2, 2]: status=started, requiredIncrease=8, maxMoves=9
+INFO unoriented partition [7, 4, 2, 2, 2]: status=verified, extendedToricClasses=4800, residual=0
+INFO unoriented partition [7, 6, 4]: status=started, requiredIncrease=8, maxMoves=9
+INFO unoriented partition [7, 6, 4]: status=verified, extendedToricClasses=185, residual=0
+INFO unoriented partition [6, 5, 2, 2, 2]: status=started, requiredIncrease=8, maxMoves=9
+INFO unoriented partition [6, 5, 2, 2, 2]: status=verified, extendedToricClasses=16500, residual=0
+INFO unoriented partition [6, 4, 3, 2, 2]: status=started, requiredIncrease=8, maxMoves=9
+INFO unoriented partition [6, 4, 3, 2, 2]: status=verified, extendedToricClasses=119000, residual=0
+INFO unoriented partition [6, 6, 5]: status=started, requiredIncrease=8, maxMoves=9
+INFO unoriented partition [6, 6, 5]: status=verified, extendedToricClasses=253, residual=0
+INFO unoriented partition [5, 4, 4, 2, 2]: status=started, requiredIncrease=8, maxMoves=9
+INFO unoriented partition [5, 4, 4, 2, 2]: status=verified, extendedToricClasses=155344, residual=0
+INFO unoriented partition [5, 2, 2, 2, 2, 2, 2]: status=started, requiredIncrease=8, maxMoves=9
+INFO unoriented partition [5, 2, 2, 2, 2, 2, 2]: status=verified, extendedToricClasses=65752, residual=0
+INFO unoriented partition [4, 4, 4, 3, 2]: status=started, requiredIncrease=8, maxMoves=9
+INFO unoriented partition [4, 4, 4, 3, 2]: status=verified, extendedToricClasses=254430, residual=0
+INFO unoriented partition [4, 3, 2, 2, 2, 2, 2]: status=started, requiredIncrease=8, maxMoves=9
+INFO unoriented partition [4, 3, 2, 2, 2, 2, 2]: status=verified, extendedToricClasses=996450, residual=0
+INFO unoriented partition [8, 6, 3]: status=started, requiredIncrease=7, maxMoves=9
+INFO unoriented partition [8, 6, 3]: status=verified, extendedToricClasses=21, residual=0
+INFO unoriented partition [8, 5, 4]: status=started, requiredIncrease=7, maxMoves=9
+INFO unoriented partition [8, 5, 4]: status=verified, extendedToricClasses=35, residual=0
+INFO unoriented partition [7, 7, 3]: status=started, requiredIncrease=7, maxMoves=9
+INFO unoriented partition [7, 7, 3]: status=verified, extendedToricClasses=37, residual=0
+INFO unoriented partition [7, 3, 3, 2, 2]: status=started, requiredIncrease=7, maxMoves=9
+INFO unoriented partition [7, 3, 3, 2, 2]: status=verified, extendedToricClasses=10896, residual=0
+INFO unoriented partition [7, 5, 5]: status=started, requiredIncrease=7, maxMoves=9
+INFO unoriented partition [7, 5, 5]: status=verified, extendedToricClasses=146, residual=0
+INFO unoriented partition [6, 3, 3, 3, 2]: status=started, requiredIncrease=7, maxMoves=9
+INFO unoriented partition [6, 3, 3, 3, 2]: status=verified, extendedToricClasses=61200, residual=0
+INFO unoriented partition [5, 5, 3, 2, 2]: status=started, requiredIncrease=7, maxMoves=9
+INFO unoriented partition [5, 5, 3, 2, 2]: status=verified, extendedToricClasses=99948, residual=0
+INFO unoriented partition [5, 4, 3, 3, 2]: status=started, requiredIncrease=7, maxMoves=9
+INFO unoriented partition [5, 4, 3, 3, 2]: status=verified, extendedToricClasses=485968, residual=0
+INFO unoriented partition [4, 4, 3, 3, 3]: status=started, requiredIncrease=7, maxMoves=9
+INFO unoriented partition [4, 4, 3, 3, 3]: status=verified, extendedToricClasses=199054, residual=0
+INFO unoriented partition [3, 3, 3, 2, 2, 2, 2]: status=started, requiredIncrease=7, maxMoves=9
+INFO unoriented partition [3, 3, 3, 2, 2, 2, 2]: status=verified, extendedToricClasses=1325494, residual=0
+INFO unoriented partition [5, 3, 3, 3, 3]: status=started, requiredIncrease=6, maxMoves=9
+INFO unoriented partition [5, 3, 3, 3, 3]: status=verified, extendedToricClasses=63364, residual=0
+INFO     complete oriented-cycle classification: cycleLength=5, visitedNodes=14, survivingCycles=2, orientedCandidateOrbits=1, sequenceSatisfiedCandidateOrbits=1, unsatisfiedCandidateOrbits=0
+INFO     complete oriented-cycle classification: cycleLength=7, visitedNodes=80, survivingCycles=2, orientedCandidateOrbits=1, sequenceSatisfiedCandidateOrbits=1, unsatisfiedCandidateOrbits=0
+INFO     complete oriented-cycle classification: cycleLength=9, visitedNodes=506, survivingCycles=3, orientedCandidateOrbits=2, sequenceSatisfiedCandidateOrbits=1, unsatisfiedCandidateOrbits=1
+INFO       unsatisfied candidate orbit: omega=(0 5 1 6 2 7 3 8 4), beta=(0 1 2 3 4 5 6 7 8), braceletKey=[1_0,1_2,1_4,1_6,1_8,1_1,1_3,1_5,1_7]
+INFO     complete oriented-cycle classification: cycleLength=11, visitedNodes=3391, survivingCycles=2, orientedCandidateOrbits=1, sequenceSatisfiedCandidateOrbits=1, unsatisfiedCandidateOrbits=0
+INFO     complete oriented-cycle classification: cycleLength=13, visitedNodes=23619, survivingCycles=4, orientedCandidateOrbits=3, sequenceSatisfiedCandidateOrbits=3, unsatisfiedCandidateOrbits=0
+INFO     complete oriented-cycle classification: cycleLength=17, visitedNodes=1243098, survivingCycles=4, orientedCandidateOrbits=3, sequenceSatisfiedCandidateOrbits=3, unsatisfiedCandidateOrbits=0
+INFO     partition [9, 6, 2]: generatedExtensions=20160, cyclicTargets=527, solved=527, residual=0, sequence=(9,8)
+INFO     partition [9, 5, 3]: generatedExtensions=40040, cyclicTargets=2096, solved=2096, residual=0, sequence=(9,7)
+INFO     partition [9, 4, 4]: generatedExtensions=25410, cyclicTargets=1643, solved=1643, residual=0, sequence=(9,8)
+INFO     partition [9, 2, 2, 2, 2]: generatedExtensions=75950, cyclicTargets=12732, solved=12732, residual=0, sequence=(9,8)
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  16:55 h
+[INFO] Finished at: 2026-09-17T22:53:17-03:00
+[INFO] ------------------------------------------------------------------------
