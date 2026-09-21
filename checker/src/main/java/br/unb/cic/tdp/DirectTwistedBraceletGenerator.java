@@ -22,24 +22,34 @@ import java.util.function.Consumer;
  * <p>When the auxiliary action is trivial, the recursion is the
  * fixed-content bracelet recursion of Karim--Sawada--Alamgir--Husnine.  For a
  * nontrivial auxiliary action, it is Sawada's fixed-content necklace
- * recursion, with one lazy comparison maintained for every rotation and
- * twisted reflection. A
- * comparison maps an encountered source cycle to the least still-unmatched
+ * recursion, with lazy comparisons rooted only at occurrences of the least
+ * annotated type.  The alphabet places an auxiliary-affected type first,
+ * choosing one of minimum total mass.  A part is affected if it is oriented
+ * or another part has the same annotated type.  If the first type has mass
+ * {@code M} and all affected parts sum to {@code S}, then {@code M <= S}.  Only the
+ * two traversal directions at those {@code M} positions can produce an
+ * auxiliary image starting with the least symbol; every other spatial image
+ * is larger at its first symbol.  At most {@code 2M} comparisons are needed.
+ * A comparison maps an encountered source cycle to the least still-unmatched
  * target cycle of the same annotated type and chooses the unique rank offset
  * that sends its first encountered rank to zero.  This constructs the least
  * auxiliary transform without enumerating the auxiliary group.</p>
  *
- * <p>Every comparison advances when a bead makes its next source and target
- * positions known.  Consequently a completed survivor is emitted directly;
- * there is no completed-word canonicalization pass.  This directness is not a
- * constant-amortized-time claim: snapshots inspect all comparison states, and
- * wrapped comparisons can advance through several offsets after one
- * placement.  Let {@code N} be the word length and let {@code T} be the number
- * of nonempty prefix candidates visited, including candidates rejected by a
- * pruning test.  Excluding work performed by caller-supplied callbacks, the
- * generator uses {@code O(N^2 * T)} total time: each prefix processes at most
- * {@code 2N} comparisons through at most {@code N} offsets.  Auxiliary cycle
- * assignments take constant time.</p>
+ * <p>A comparison is activated when its root bead is placed and advances when
+ * its next source and target positions become known.  Consequently a
+ * completed survivor is emitted directly, without a completed-word
+ * canonicalization pass.  This directness is not a constant-amortized-time
+ * claim: snapshots and scans cost {@code O(S)}, and wrapped comparisons can
+ * advance through several offsets after one placement.  Along any root-to-leaf
+ * path their cursors advance at most {@code O(N*S)} times in total, where
+ * {@code N} is the word length.  Auxiliary cycle assignments and source-position
+ * calculations take constant time.  Including the underlying recursion and
+ * semantic checks, conservative bounds are {@code O(N*S + N)} per prefix
+ * candidate and {@code O(N*S + N^2)} per root-to-leaf path.  Thus, for {@code T}
+ * nonempty prefix candidates visited, including rejected candidates, total
+ * sequential time is {@code O((N*S + N)*T)}, excluding caller callbacks and
+ * parallel-frontier copying.  No comparison states are allocated when
+ * {@code S = 0}.</p>
  */
 final class DirectTwistedBraceletGenerator {
 
@@ -310,6 +320,35 @@ final class DirectTwistedBraceletGenerator {
                 .comparingInt(CycleSpec::size)
                 .reversed()
                 .thenComparing(CycleSpec::oriented));
+
+        // Any spatial image rooted outside the first annotated type starts
+        // above symbol zero.  Give that type the smallest affected mass, so
+        // the two comparisons per occurrence are bounded by 2S, even when
+        // much larger unaffected parts are present.  Preserve whole groups
+        // and the previous relative order of every other annotated type.
+        var firstAffectedStart = -1;
+        var firstAffectedEnd = -1;
+        var leastAffectedMass = Long.MAX_VALUE;
+        for (var start = 0; start < specs.length; ) {
+            var end = start + 1;
+            while (end < specs.length && specs[end].equals(specs[start])) {
+                end++;
+            }
+            final var mass = (long) specs[start].size * (end - start);
+            if ((specs[start].oriented || end - start > 1)
+                    && mass < leastAffectedMass) {
+                firstAffectedStart = start;
+                firstAffectedEnd = end;
+                leastAffectedMass = mass;
+            }
+            start = end;
+        }
+        if (firstAffectedStart > 0) {
+            final var firstGroup = Arrays.copyOfRange(
+                    specs, firstAffectedStart, firstAffectedEnd);
+            System.arraycopy(specs, 0, specs, firstGroup.length, firstAffectedStart);
+            System.arraycopy(firstGroup, 0, specs, 0, firstGroup.length);
+        }
         return specs;
     }
 
@@ -448,18 +487,17 @@ final class DirectTwistedBraceletGenerator {
         private final int[] secondTargetSourceByPosition;
         private int targetEdgeCount;
 
-        // There is one state for every r_shift and one for every r_shift s,
-        // where the distinguished reflection is s(j) = -j. Mapping arrays
-        // are flattened by state.
+        // Each placed group-zero bead activates adjacent forward/backward
+        // states, rooted at its position.  Thus state zero is always the
+        // forward identity comparison.  Mapping arrays are flattened by state.
         private final int comparisonCount;
         private final int[] comparisonMapBase;
-        private final int[] comparisonPositionBase;
-        private final int[] comparisonSourcePosition;
+        private final int[] comparisonStartPosition;
         private final int[] comparisonStateByMapIndex;
+        private int activeComparisonCount;
         private final int[] comparisonOffset;
         private final byte[] comparisonStatus;
         private final int[] comparisonSourceToTarget;
-        private final int[] comparisonTargetToSource;
         private final int[] comparisonRankOffset;
 
         // Within each annotated-type group, targets are assigned in array
@@ -471,10 +509,9 @@ final class DirectTwistedBraceletGenerator {
         // node of the generation tree.
         private final int[][] comparisonOffsetStack;
         private final byte[][] comparisonStatusStack;
-        private final int[] unfinishedComparisonStack;
+        private final int[] activeComparisonCountStack;
         private final int[] comparisonMapTrail;
         private final int[] comparisonMapTrailMarker;
-        private int unfinishedComparisons;
         private int comparisonMapTrailSize;
         private Consumer<GenerationTask> continuationCollector;
 
@@ -529,25 +566,23 @@ final class DirectTwistedBraceletGenerator {
 
             // With no auxiliary color permutation or rank-origin choice,
             // BraceletFC already enforces every required spatial comparison.
-            this.comparisonCount = auxiliaryActionTrivial ? 0 : 2 * n;
+            this.comparisonCount = auxiliaryActionTrivial ? 0
+                    : 2 * specs[0].size * cyclesByGroup[0].length;
             final var comparisonMapLength = comparisonCount * specs.length;
             this.comparisonMapBase = new int[comparisonCount];
-            this.comparisonPositionBase = new int[comparisonCount];
-            this.comparisonSourcePosition = new int[comparisonCount * n];
+            this.comparisonStartPosition = new int[comparisonCount];
             this.comparisonStateByMapIndex = new int[comparisonMapLength];
             this.comparisonOffset = new int[comparisonCount];
             this.comparisonStatus = new byte[comparisonCount];
             this.comparisonSourceToTarget = new int[comparisonMapLength];
-            this.comparisonTargetToSource = new int[comparisonMapLength];
             this.comparisonRankOffset = new int[comparisonMapLength];
             this.comparisonNextTargetByGroup =
                     new int[comparisonCount * cyclesByGroup.length];
             this.comparisonOffsetStack = new int[n][comparisonCount];
             this.comparisonStatusStack = new byte[n][comparisonCount];
-            this.unfinishedComparisonStack = new int[n];
+            this.activeComparisonCountStack = new int[n];
             this.comparisonMapTrail = new int[comparisonMapLength];
             this.comparisonMapTrailMarker = new int[n];
-            this.unfinishedComparisons = comparisonCount;
 
             Arrays.fill(lastRankByCycle, -1);
             Arrays.fill(positionBySymbol, -1);
@@ -560,7 +595,6 @@ final class DirectTwistedBraceletGenerator {
             Arrays.fill(firstTargetSourceByPosition, -1);
             Arrays.fill(secondTargetSourceByPosition, -1);
             Arrays.fill(comparisonSourceToTarget, -1);
-            Arrays.fill(comparisonTargetToSource, -1);
             for (var vertex = 0; vertex < n; vertex++) {
                 targetComponentParent[vertex] = vertex;
             }
@@ -605,10 +639,11 @@ final class DirectTwistedBraceletGenerator {
                     secondTargetSourceByPosition);
             targetEdgeCount = source.targetEdgeCount;
 
+            copy(source.comparisonStartPosition, comparisonStartPosition);
+            activeComparisonCount = source.activeComparisonCount;
             copy(source.comparisonOffset, comparisonOffset);
             copy(source.comparisonStatus, comparisonStatus);
             copy(source.comparisonSourceToTarget, comparisonSourceToTarget);
-            copy(source.comparisonTargetToSource, comparisonTargetToSource);
             copy(source.comparisonRankOffset, comparisonRankOffset);
             copy(source.comparisonNextTargetByGroup,
                     comparisonNextTargetByGroup);
@@ -618,10 +653,9 @@ final class DirectTwistedBraceletGenerator {
                 copy(source.comparisonStatusStack[position],
                         comparisonStatusStack[position]);
             }
-            copy(source.unfinishedComparisonStack, unfinishedComparisonStack);
+            copy(source.activeComparisonCountStack, activeComparisonCountStack);
             copy(source.comparisonMapTrail, comparisonMapTrail);
             copy(source.comparisonMapTrailMarker, comparisonMapTrailMarker);
-            unfinishedComparisons = source.unfinishedComparisons;
             comparisonMapTrailSize = source.comparisonMapTrailSize;
         }
 
@@ -661,30 +695,9 @@ final class DirectTwistedBraceletGenerator {
         private void initializeComparisonIndexes() {
             for (var state = 0; state < comparisonCount; state++) {
                 final var mapBase = state * specs.length;
-                final var positionBase = state * n;
                 comparisonMapBase[state] = mapBase;
-                comparisonPositionBase[state] = positionBase;
                 Arrays.fill(comparisonStateByMapIndex,
                         mapBase, mapBase + specs.length, state);
-
-                final var shift = state < n ? state : state - n;
-                var sourcePosition = state < n
-                        ? shift
-                        : (shift == 0 ? 0 : n - shift);
-                for (var offset = 0; offset < n; offset++) {
-                    comparisonSourcePosition[positionBase + offset] = sourcePosition;
-                    if (state < n) {
-                        sourcePosition++;
-                        if (sourcePosition == n) {
-                            sourcePosition = 0;
-                        }
-                    } else {
-                        sourcePosition--;
-                        if (sourcePosition < 0) {
-                            sourcePosition = n - 1;
-                        }
-                    }
-                }
             }
         }
 
@@ -1211,53 +1224,72 @@ final class DirectTwistedBraceletGenerator {
         }
 
         /**
-         * Saves all lazy comparisons before the bead at {@code position} is
-         * allowed to advance them.
+         * Saves active comparisons before the bead at {@code position} can
+         * activate a new pair or advance existing comparisons.
          */
         private void saveComparisons(final int position) {
             System.arraycopy(comparisonOffset, 0,
-                    comparisonOffsetStack[position], 0, comparisonCount);
+                    comparisonOffsetStack[position], 0, activeComparisonCount);
             System.arraycopy(comparisonStatus, 0,
-                    comparisonStatusStack[position], 0, comparisonCount);
-            unfinishedComparisonStack[position] = unfinishedComparisons;
+                    comparisonStatusStack[position], 0, activeComparisonCount);
+            activeComparisonCountStack[position] = activeComparisonCount;
             comparisonMapTrailMarker[position] = comparisonMapTrailSize;
         }
 
         private void restoreComparisons(final int position) {
+            final var savedCount = activeComparisonCountStack[position];
             System.arraycopy(comparisonOffsetStack[position], 0,
-                    comparisonOffset, 0, comparisonCount);
+                    comparisonOffset, 0, savedCount);
             System.arraycopy(comparisonStatusStack[position], 0,
-                    comparisonStatus, 0, comparisonCount);
-            unfinishedComparisons = unfinishedComparisonStack[position];
+                    comparisonStatus, 0, savedCount);
             final var marker = comparisonMapTrailMarker[position];
             while (comparisonMapTrailSize > marker) {
                 final var mapIndex = comparisonMapTrail[--comparisonMapTrailSize];
                 final var state = comparisonStateByMapIndex[mapIndex];
-                final var targetCycle = comparisonSourceToTarget[mapIndex];
                 final var sourceCycle = mapIndex - comparisonMapBase[state];
                 comparisonSourceToTarget[mapIndex] = -1;
-                comparisonTargetToSource[comparisonMapBase[state] + targetCycle] = -1;
                 comparisonRankOffset[mapIndex] = 0;
                 comparisonNextTargetByGroup[state * cyclesByGroup.length
                         + groupByCycle[sourceCycle]]--;
             }
+            // A newly activated pair has no state before this placement.
+            // All its map entries were removed by the same trail rollback.
+            for (var state = savedCount; state < activeComparisonCount; state++) {
+                comparisonStartPosition[state] = 0;
+                comparisonOffset[state] = 0;
+                comparisonStatus[state] = 0;
+            }
+            activeComparisonCount = savedCount;
         }
 
         /**
-         * Advances each comparison through every now-known consecutive pair.
-         * A smaller auxiliary transform rejects the branch immediately.
+         * Activates the two traversals rooted at a new group-zero bead, then
+         * advances every comparison through its now-known consecutive pairs.
+         * Roots of other types cannot map to symbol zero, so their transforms
+         * already exceed the candidate word at its first position.
          */
         private boolean advanceComparisons(final int prefixLength) {
-            for (var state = 0; state < comparisonCount; state++) {
+            final var position = prefixLength - 1;
+            if (!auxiliaryActionTrivial
+                    && groupByCycle[symbolCycle[word[prefixLength]]] == 0) {
+                comparisonStartPosition[activeComparisonCount++] = position;
+                comparisonStartPosition[activeComparisonCount++] = position;
+            }
+            for (var state = 0; state < activeComparisonCount; state++) {
                 if (comparisonStatus[state] == COMPARISON_LARGER) {
                     continue;
                 }
-                final var reflected = state >= n;
-                final var mapBase = comparisonMapBase[state];
-                final var positionBase = comparisonPositionBase[state];
+                final var reflected = (state & 1) != 0;
+                final var startPosition = comparisonStartPosition[state];
                 var offset = comparisonOffset[state];
                 while (offset < n && offset < prefixLength) {
-                    final var sourcePosition = comparisonSourcePosition[positionBase + offset];
+                    var sourcePosition = reflected
+                            ? startPosition - offset : startPosition + offset;
+                    if (sourcePosition < 0) {
+                        sourcePosition += n;
+                    } else if (sourcePosition >= n) {
+                        sourcePosition -= n;
+                    }
                     if (sourcePosition >= prefixLength) {
                         break;
                     }
@@ -1273,11 +1305,7 @@ final class DirectTwistedBraceletGenerator {
                     comparisonOffset[state] = offset;
                     if (candidate > current) {
                         comparisonStatus[state] = COMPARISON_LARGER;
-                        unfinishedComparisons--;
                         break;
-                    }
-                    if (offset == n) {
-                        unfinishedComparisons--;
                     }
                 }
             }
@@ -1302,7 +1330,6 @@ final class DirectTwistedBraceletGenerator {
                 targetCycle = cyclesByGroup[groupIndex][
                         comparisonNextTargetByGroup[nextTargetIndex]++];
                 comparisonSourceToTarget[mapIndex] = targetCycle;
-                comparisonTargetToSource[mapBase + targetCycle] = sourceCycle;
                 comparisonMapTrail[comparisonMapTrailSize++] = mapIndex;
 
                 if (specs[sourceCycle].oriented) {

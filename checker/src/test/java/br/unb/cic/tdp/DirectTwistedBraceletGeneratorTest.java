@@ -61,13 +61,27 @@ class DirectTwistedBraceletGeneratorTest {
 
     @Test
     void concurrentGenerationMatchesSequentialGeneration() {
-        final var expected = generatedCanonicals(
+        assertConcurrentGenerationMatchesSequentialGeneration(
                 new int[]{5, 3}, new boolean[]{true, false});
+    }
+
+    @Test
+    void sparseComparisonBranchesMatchSequentialGeneration() {
+        assertConcurrentGenerationMatchesSequentialGeneration(
+                new int[]{5, 3, 3}, new boolean[]{false, false, false});
+        assertConcurrentGenerationMatchesSequentialGeneration(
+                new int[]{5, 3, 3}, new boolean[]{false, true, false});
+    }
+
+    private static void assertConcurrentGenerationMatchesSequentialGeneration(
+            final int[] partition, final boolean[] orientedByPart) {
+        final var expected = generatedCanonicals(partition, orientedByPart);
+        assertTrue(!expected.isEmpty());
         final Set<String> concurrent = ConcurrentHashMap.newKeySet();
         final var emitted = new AtomicInteger();
 
         DirectTwistedBraceletGenerator.generateRepresentativesConcurrently(
-                new int[]{5, 3}, new boolean[]{true, false}, () -> { }, pair -> {
+                partition, orientedByPart, () -> { }, pair -> {
                     emitted.incrementAndGet();
                     concurrent.add(classKey(pair));
                 });
@@ -172,6 +186,36 @@ class DirectTwistedBraceletGeneratorTest {
 
         assertEquals(1, words.size());
         assertTrue(Arrays.stream(words.getFirst()).allMatch(symbol -> symbol == 0));
+    }
+
+    @Test
+    void rawWordsMatchExhaustiveOrbitsWhenUnaffectedPartsAreLargest() {
+        assertRawWordsMatchBruteForce(new int[]{5, 3}, new boolean[]{false, true},
+                List.of(new Annotation(3, true), new Annotation(5, false)));
+        assertRawWordsMatchBruteForce(new int[]{5, 2, 2}, new boolean[]{false, false, false},
+                List.of(new Annotation(2, false), new Annotation(2, false),
+                        new Annotation(5, false)));
+        // This annotated type has no realizable target, so a representative-only
+        // oracle would not exercise its comparison rollback and slot reuse.
+        assertRawWordsMatchBruteForce(new int[]{4, 2, 2}, new boolean[]{false, false, false},
+                List.of(new Annotation(2, false), new Annotation(2, false),
+                        new Annotation(4, false)));
+        assertRawWordsMatchBruteForce(new int[]{2, 5, 2}, new boolean[]{false, false, false},
+                List.of(new Annotation(2, false), new Annotation(2, false),
+                        new Annotation(5, false)));
+    }
+
+    @Test
+    void rawWordsMatchExhaustiveOrbitsWithCompetingAffectedGroups() {
+        assertRawWordsMatchBruteForce(new int[]{4, 3}, new boolean[]{true, true},
+                List.of(new Annotation(3, true), new Annotation(4, true)));
+        assertRawWordsMatchBruteForce(new int[]{3, 2, 2}, new boolean[]{true, false, false},
+                List.of(new Annotation(3, true), new Annotation(2, false),
+                        new Annotation(2, false)));
+        // Equal total group masses retain descending-size priority.
+        assertRawWordsMatchBruteForce(new int[]{2, 4, 2}, new boolean[]{false, true, false},
+                List.of(new Annotation(4, true), new Annotation(2, false),
+                        new Annotation(2, false)));
     }
 
     @Test
@@ -280,6 +324,136 @@ class DirectTwistedBraceletGeneratorTest {
         final var expected = bruteForceCanonicals(
                 Arrays.stream(partition).sum(), partition, orientedByPart);
         assertEquals(expected, generated);
+    }
+
+    private static void assertRawWordsMatchBruteForce(
+            final int[] partition,
+            final boolean[] orientedByPart,
+            final List<Annotation> alphabetOrder) {
+        final Set<String> generated = new HashSet<>();
+        final var emitted = new AtomicInteger();
+        DirectTwistedBraceletGenerator.generateWords(partition, orientedByPart, word -> {
+            emitted.incrementAndGet();
+            generated.add(Arrays.toString(word));
+        });
+
+        final var expected = bruteForceRawWords(alphabetOrder);
+        assertTrue(!expected.isEmpty());
+        assertEquals(expected, generated,
+                "Raw orbit mismatch for alphabet " + alphabetOrder);
+        assertEquals(generated.size(), emitted.get(), "Duplicate raw representatives");
+    }
+
+    /**
+     * Enumerates every fixed-content word, then minimizes every complete spatial
+     * transform independently. No generation-prefix state or realizability filter
+     * is shared with the implementation under test. The expected alphabet order
+     * is supplied explicitly so its choice of anchor group is tested as well.
+     */
+    private static Set<String> bruteForceRawWords(final List<Annotation> alphabetOrder) {
+        final var length = alphabetOrder.stream().mapToInt(Annotation::size).sum();
+        final var symbolCount = alphabetOrder.stream()
+                .mapToInt(type -> type.oriented() ? type.size() : 1).sum();
+        final var symbolCycle = new int[symbolCount];
+        final var symbolRank = new int[symbolCount];
+        final var firstSymbol = new int[alphabetOrder.size()];
+        final var remaining = new int[symbolCount];
+        var symbol = 0;
+        for (var cycle = 0; cycle < alphabetOrder.size(); cycle++) {
+            final var type = alphabetOrder.get(cycle);
+            firstSymbol[cycle] = symbol;
+            for (var rank = 0; rank < (type.oriented() ? type.size() : 1); rank++) {
+                symbolCycle[symbol] = cycle;
+                symbolRank[symbol] = rank;
+                remaining[symbol++] = type.oriented() ? 1 : type.size();
+            }
+        }
+
+        final Set<String> expected = new HashSet<>();
+        forEachMultisetWord(remaining, new int[length], 0, word -> {
+            for (var cycle = 0; cycle < alphabetOrder.size(); cycle++) {
+                final var type = alphabetOrder.get(cycle);
+                if (!type.oriented()) {
+                    continue;
+                }
+                var previousRank = -1;
+                var reverseOrder = true;
+                for (final var bead : word) {
+                    if (symbolCycle[bead] == cycle) {
+                        if (previousRank >= 0
+                                && (symbolRank[bead] + 1) % type.size() != previousRank) {
+                            reverseOrder = false;
+                        }
+                        previousRank = symbolRank[bead];
+                    }
+                }
+                if (reverseOrder) {
+                    return;
+                }
+            }
+
+            int[] minimum = null;
+            for (var start = 0; start < length; start++) {
+                for (final var direction : new int[]{1, -1}) {
+                    final var transformed = standardizedTraversal(word, start, direction,
+                            alphabetOrder, symbolCycle, symbolRank, firstSymbol);
+                    if (minimum == null || Arrays.compare(transformed, minimum) < 0) {
+                        minimum = transformed;
+                    }
+                }
+            }
+            expected.add(Arrays.toString(minimum));
+        });
+        return expected;
+    }
+
+    private static int[] standardizedTraversal(
+            final int[] word, final int start, final int direction,
+            final List<Annotation> alphabetOrder,
+            final int[] symbolCycle, final int[] symbolRank, final int[] firstSymbol) {
+        final var targetByCycle = new int[alphabetOrder.size()];
+        Arrays.fill(targetByCycle, -1);
+        final var targetUsed = new boolean[alphabetOrder.size()];
+        final var rankOrigin = new int[alphabetOrder.size()];
+        final var result = new int[word.length];
+        for (var offset = 0; offset < word.length; offset++) {
+            final var bead = word[Math.floorMod(start + direction * offset, word.length)];
+            final var cycle = symbolCycle[bead];
+            final var type = alphabetOrder.get(cycle);
+            if (targetByCycle[cycle] == -1) {
+                for (var target = 0; target < alphabetOrder.size(); target++) {
+                    if (!targetUsed[target] && alphabetOrder.get(target).equals(type)) {
+                        targetByCycle[cycle] = target;
+                        targetUsed[target] = true;
+                        break;
+                    }
+                }
+                rankOrigin[cycle] = symbolRank[bead];
+            }
+            // A reflected traversal also inverts ranks before choosing origins.
+            final var rank = Math.floorMod(
+                    direction * (symbolRank[bead] - rankOrigin[cycle]), type.size());
+            result[offset] = firstSymbol[targetByCycle[cycle]] + rank;
+        }
+        return result;
+    }
+
+    private static void forEachMultisetWord(final int[] remaining,
+                                            final int[] word,
+                                            final int position,
+                                            final Consumer<int[]> consumer) {
+        if (position == word.length) {
+            consumer.accept(word);
+            return;
+        }
+        for (var symbol = 0; symbol < remaining.length; symbol++) {
+            if (remaining[symbol] > 0) {
+                remaining[symbol]--;
+                word[position] = symbol;
+                forEachMultisetWord(remaining, word, position + 1, consumer);
+                remaining[symbol]++;
+            }
+        }
     }
 
     private static Set<String> generatedCanonicals(final int[] partition,
