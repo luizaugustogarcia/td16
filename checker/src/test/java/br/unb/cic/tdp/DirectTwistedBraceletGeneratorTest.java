@@ -151,6 +151,26 @@ class DirectTwistedBraceletGeneratorTest {
     }
 
     @Test
+    void preservesPersistentRepresentativeForSevenFourTwoTwoTwo() {
+        final var emitted = new AtomicInteger();
+        final var persistentRepresentative = new boolean[1];
+        final var reorderedRepresentative = new boolean[1];
+        DirectTwistedBraceletGenerator.generateRepresentatives(
+                new int[]{7, 4, 2, 2, 2}, new boolean[5], pair -> {
+                    emitted.incrementAndGet();
+                    final var omega = pair.getOmega().toString();
+                    persistentRepresentative[0] |= omega.equals(
+                            "(0 13 11 8 6 4 2)(1 10 5 3)(7 15)(9 16)(12 14)");
+                    reorderedRepresentative[0] |= omega.equals(
+                            "(0 7)(1 9)(2 4)(3 16 14 12 10 8 5)(6 15 13 11)");
+                });
+
+        assertEquals(4_800, emitted.get());
+        assertTrue(persistentRepresentative[0]);
+        assertTrue(!reorderedRepresentative[0]);
+    }
+
+    @Test
     void emitsNothingForTheUnrealizableSingleTwoCycleFamily() {
         assertTrue(generatedCanonicals(
                 new int[]{2}, new boolean[]{false}).isEmpty());
@@ -189,26 +209,26 @@ class DirectTwistedBraceletGeneratorTest {
     }
 
     @Test
-    void rawWordsMatchExhaustiveOrbitsWhenUnaffectedPartsAreLargest() {
+    void rawWordsMatchExhaustiveOrbitsInPersistentAlphabetOrder() {
         assertRawWordsMatchBruteForce(new int[]{5, 3}, new boolean[]{false, true},
-                List.of(new Annotation(3, true), new Annotation(5, false)));
+                List.of(new Annotation(5, false), new Annotation(3, true)));
         assertRawWordsMatchBruteForce(new int[]{5, 2, 2}, new boolean[]{false, false, false},
-                List.of(new Annotation(2, false), new Annotation(2, false),
-                        new Annotation(5, false)));
+                List.of(new Annotation(5, false), new Annotation(2, false),
+                        new Annotation(2, false)));
         // This annotated type has no realizable target, so a representative-only
         // oracle would not exercise its comparison rollback and slot reuse.
         assertRawWordsMatchBruteForce(new int[]{4, 2, 2}, new boolean[]{false, false, false},
-                List.of(new Annotation(2, false), new Annotation(2, false),
-                        new Annotation(4, false)));
+                List.of(new Annotation(4, false), new Annotation(2, false),
+                        new Annotation(2, false)));
         assertRawWordsMatchBruteForce(new int[]{2, 5, 2}, new boolean[]{false, false, false},
-                List.of(new Annotation(2, false), new Annotation(2, false),
-                        new Annotation(5, false)));
+                List.of(new Annotation(5, false), new Annotation(2, false),
+                        new Annotation(2, false)));
     }
 
     @Test
     void rawWordsMatchExhaustiveOrbitsWithCompetingAffectedGroups() {
         assertRawWordsMatchBruteForce(new int[]{4, 3}, new boolean[]{true, true},
-                List.of(new Annotation(3, true), new Annotation(4, true)));
+                List.of(new Annotation(4, true), new Annotation(3, true)));
         assertRawWordsMatchBruteForce(new int[]{3, 2, 2}, new boolean[]{true, false, false},
                 List.of(new Annotation(3, true), new Annotation(2, false),
                         new Annotation(2, false)));

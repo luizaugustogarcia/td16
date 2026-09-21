@@ -21,15 +21,14 @@ import java.util.function.Consumer;
  *
  * <p>When the auxiliary action is trivial, the recursion is the
  * fixed-content bracelet recursion of Karim--Sawada--Alamgir--Husnine.  For a
- * nontrivial auxiliary action, it is Sawada's fixed-content necklace
- * recursion, with lazy comparisons rooted only at occurrences of the least
- * annotated type.  The alphabet places an auxiliary-affected type first,
- * choosing one of minimum total mass.  A part is affected if it is oriented
- * or another part has the same annotated type.  If the first type has mass
- * {@code M} and all affected parts sum to {@code S}, then {@code M <= S}.  Only the
- * two traversal directions at those {@code M} positions can produce an
- * auxiliary image starting with the least symbol; every other spatial image
- * is larger at its first symbol.  At most {@code 2M} comparisons are needed.
+ * nontrivial auxiliary action, the same recursion is augmented with lazy
+ * comparisons rooted at occurrences of the first auxiliary-affected type in
+ * the word.  A part is affected if it is oriented or another part has the same
+ * annotated type.  If that root type has mass {@code M} and all affected parts
+ * sum to {@code S}, then {@code M <= S}.  The base recursion handles spatial
+ * images which differ before that first affected bead.  Every remaining image
+ * aligns it with one of the {@code M} beads of its own type, in either traversal
+ * direction, so at most {@code 2M} auxiliary comparisons are needed.
  * A comparison maps an encountered source cycle to the least still-unmatched
  * target cycle of the same annotated type and chooses the unique rank offset
  * that sends its first encountered rank to zero.  This constructs the least
@@ -321,34 +320,6 @@ final class DirectTwistedBraceletGenerator {
                 .reversed()
                 .thenComparing(CycleSpec::oriented));
 
-        // Any spatial image rooted outside the first annotated type starts
-        // above symbol zero.  Give that type the smallest affected mass, so
-        // the two comparisons per occurrence are bounded by 2S, even when
-        // much larger unaffected parts are present.  Preserve whole groups
-        // and the previous relative order of every other annotated type.
-        var firstAffectedStart = -1;
-        var firstAffectedEnd = -1;
-        var leastAffectedMass = Long.MAX_VALUE;
-        for (var start = 0; start < specs.length; ) {
-            var end = start + 1;
-            while (end < specs.length && specs[end].equals(specs[start])) {
-                end++;
-            }
-            final var mass = (long) specs[start].size * (end - start);
-            if ((specs[start].oriented || end - start > 1)
-                    && mass < leastAffectedMass) {
-                firstAffectedStart = start;
-                firstAffectedEnd = end;
-                leastAffectedMass = mass;
-            }
-            start = end;
-        }
-        if (firstAffectedStart > 0) {
-            final var firstGroup = Arrays.copyOfRange(
-                    specs, firstAffectedStart, firstAffectedEnd);
-            System.arraycopy(specs, 0, specs, firstGroup.length, firstAffectedStart);
-            System.arraycopy(firstGroup, 0, specs, 0, firstGroup.length);
-        }
         return specs;
     }
 
@@ -487,14 +458,18 @@ final class DirectTwistedBraceletGenerator {
         private final int[] secondTargetSourceByPosition;
         private int targetEdgeCount;
 
-        // Each placed group-zero bead activates adjacent forward/backward
-        // states, rooted at its position.  Thus state zero is always the
-        // forward identity comparison.  Mapping arrays are flattened by state.
+        // Once the first affected bead fixes an anchor group and target
+        // position, each bead of that group activates the forward/backward
+        // transforms aligning it with the anchor.  State zero is therefore
+        // always the forward identity comparison.  Mapping arrays are
+        // flattened by state.
         private final int comparisonCount;
         private final int[] comparisonMapBase;
         private final int[] comparisonStartPosition;
         private final int[] comparisonStateByMapIndex;
         private int activeComparisonCount;
+        private int comparisonAnchorGroup = -1;
+        private int comparisonAnchorPosition;
         private final int[] comparisonOffset;
         private final byte[] comparisonStatus;
         private final int[] comparisonSourceToTarget;
@@ -566,8 +541,8 @@ final class DirectTwistedBraceletGenerator {
 
             // With no auxiliary color permutation or rank-origin choice,
             // BraceletFC already enforces every required spatial comparison.
-            this.comparisonCount = auxiliaryActionTrivial ? 0
-                    : 2 * specs[0].size * cyclesByGroup[0].length;
+            this.comparisonCount = auxiliaryActionTrivial ? 0 : Math.multiplyExact(
+                    2, affectedMass(specs, cyclesByGroup));
             final var comparisonMapLength = comparisonCount * specs.length;
             this.comparisonMapBase = new int[comparisonCount];
             this.comparisonStartPosition = new int[comparisonCount];
@@ -641,6 +616,8 @@ final class DirectTwistedBraceletGenerator {
 
             copy(source.comparisonStartPosition, comparisonStartPosition);
             activeComparisonCount = source.activeComparisonCount;
+            comparisonAnchorGroup = source.comparisonAnchorGroup;
+            comparisonAnchorPosition = source.comparisonAnchorPosition;
             copy(source.comparisonOffset, comparisonOffset);
             copy(source.comparisonStatus, comparisonStatus);
             copy(source.comparisonSourceToTarget, comparisonSourceToTarget);
@@ -707,11 +684,7 @@ final class DirectTwistedBraceletGenerator {
                 return;
             }
 
-            if (auxiliaryActionTrivial) {
-                generateBracelets(2, 1, 1, 2, 1, false);
-            } else {
-                generateNecklaces(2, 1);
-            }
+            generateBracelets(2, 1, 1, 2, 1, false);
             endGeneration();
         }
 
@@ -720,9 +693,7 @@ final class DirectTwistedBraceletGenerator {
             if (!beginGeneration()) {
                 return null;
             }
-            return auxiliaryActionTrivial
-                    ? GenerationTask.regular(this, 2, 1, 1, 2, 1, false)
-                    : GenerationTask.necklace(this, 2, 1);
+            return GenerationTask.regular(this, 2, 1, 1, 2, 1, false);
         }
 
         private boolean beginGeneration() {
@@ -1201,7 +1172,7 @@ final class DirectTwistedBraceletGenerator {
          * before any semantic or rollback state is touched.
          */
         private boolean identityComparisonAllows(final int symbol) {
-            if (auxiliaryActionTrivial) {
+            if (auxiliaryActionTrivial || activeComparisonCount == 0) {
                 return true;
             }
             final var sourceCycle = symbolCycle[symbol];
@@ -1260,20 +1231,33 @@ final class DirectTwistedBraceletGenerator {
                 comparisonStatus[state] = 0;
             }
             activeComparisonCount = savedCount;
+            if (savedCount == 0) {
+                comparisonAnchorGroup = -1;
+                comparisonAnchorPosition = 0;
+            }
         }
 
         /**
-         * Activates the two traversals rooted at a new group-zero bead, then
+         * Activates the two traversals which align a bead of the anchor group
+         * with the first affected bead in the current word, then
          * advances every comparison through its now-known consecutive pairs.
-         * Roots of other types cannot map to symbol zero, so their transforms
-         * already exceed the candidate word at its first position.
+         * Any auxiliary transform that first changes the word after that bead
+         * must preserve its annotated type; transforms differing earlier are
+         * already handled by the base bracelet recursion.
          */
         private boolean advanceComparisons(final int prefixLength) {
             final var position = prefixLength - 1;
+            final var group = groupByCycle[symbolCycle[word[prefixLength]]];
             if (!auxiliaryActionTrivial
-                    && groupByCycle[symbolCycle[word[prefixLength]]] == 0) {
-                comparisonStartPosition[activeComparisonCount++] = position;
-                comparisonStartPosition[activeComparisonCount++] = position;
+                    && comparisonAnchorGroup == -1 && isAffectedGroup(group)) {
+                comparisonAnchorGroup = group;
+                comparisonAnchorPosition = position;
+            }
+            if (group == comparisonAnchorGroup) {
+                comparisonStartPosition[activeComparisonCount++] =
+                        Math.floorMod(position - comparisonAnchorPosition, n);
+                comparisonStartPosition[activeComparisonCount++] =
+                        (position + comparisonAnchorPosition) % n;
             }
             for (var state = 0; state < activeComparisonCount; state++) {
                 if (comparisonStatus[state] == COMPARISON_LARGER) {
@@ -1611,6 +1595,23 @@ final class DirectTwistedBraceletGenerator {
                 }
             }
             return true;
+        }
+
+        private static int affectedMass(final CycleSpec[] specs,
+                                        final int[][] cyclesByGroup) {
+            var result = 0;
+            for (final var group : cyclesByGroup) {
+                if (specs[group[0]].oriented || group.length > 1) {
+                    result = Math.addExact(result,
+                            Math.multiplyExact(specs[group[0]].size, group.length));
+                }
+            }
+            return result;
+        }
+
+        private boolean isAffectedGroup(final int group) {
+            return specs[cyclesByGroup[group][0]].oriented
+                    || cyclesByGroup[group].length > 1;
         }
     }
 

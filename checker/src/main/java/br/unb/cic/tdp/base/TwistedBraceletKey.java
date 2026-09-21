@@ -28,7 +28,7 @@ public final class TwistedBraceletKey implements Comparable<TwistedBraceletKey> 
     }
 
     /**
-     * Compares words in the fixed alphabet used for persistent orbit keys.
+     * Compares words in the fixed alphabet used by direct generation.
      *
      * <p>Standardized encoding labels record global first occurrence.  That
      * convention is useful for an intrinsic representation, but it is not the
