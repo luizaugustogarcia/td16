@@ -19,7 +19,7 @@ Picked up JAVA_TOOL_OPTIONS: -Xmx128G -XX:+UseParallelGC
 [INFO] Nothing to compile - all classes are up to date.
 [INFO] 
 [INFO] --- exec-maven-plugin:3.1.0:exec (cmake-build) @ emitter ---
-[100%] Built target tdp1375_jni
+[100%] Built target td16_jni
 [INFO] 
 [INFO] --- exec-maven-plugin:3.1.0:exec (default-cli) @ emitter ---
 Picked up JAVA_TOOL_OPTIONS: -Xmx128G -XX:+UseParallelGC

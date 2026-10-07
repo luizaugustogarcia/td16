@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(tdp1375_native LANGUAGES CXX CUDA)
+project(td16_native LANGUAGES CXX CUDA)
 
 find_package(CUDAToolkit REQUIRED)
 
@@ -42,36 +42,36 @@ set(CMAKE_CUDA_RUNTIME_LIBRARY Shared)
 set(TDP_NATIVE_MAX_N 17)
 set(TDP_NATIVE_MAX_DEPTH 9)
 
-# ── tdp1375_jni (JNI shared library) ────────────────────────────────────────
+# ── td16_jni (JNI shared library) ───────────────────────────────────────────
 
 find_package(JNI)
 
 if(JNI_FOUND)
-    add_library(tdp1375_jni SHARED
+    add_library(td16_jni SHARED
         jni/jni_sorter.cu
         backtracking/slot_manager.cu
         backtracking/sorting_search.cu
     )
 
-    target_include_directories(tdp1375_jni PRIVATE
+    target_include_directories(td16_jni PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${JNI_INCLUDE_DIRS}
     )
-    target_link_libraries(tdp1375_jni PRIVATE CUDA::cudart ${JNI_LIBRARIES})
+    target_link_libraries(td16_jni PRIVATE CUDA::cudart ${JNI_LIBRARIES})
 
-    set_target_properties(tdp1375_jni PROPERTIES
+    set_target_properties(td16_jni PROPERTIES
         POSITION_INDEPENDENT_CODE ON
         CUDA_SEPARABLE_COMPILATION ON
         CUDA_RESOLVE_DEVICE_SYMBOLS ON
     )
 
-    target_compile_definitions(tdp1375_jni PRIVATE MAX_N=${TDP_NATIVE_MAX_N} MAX_DEPTH=${TDP_NATIVE_MAX_DEPTH})
+    target_compile_definitions(td16_jni PRIVATE MAX_N=${TDP_NATIVE_MAX_N} MAX_DEPTH=${TDP_NATIVE_MAX_DEPTH})
 
-    target_compile_options(tdp1375_jni PRIVATE
+    target_compile_options(td16_jni PRIVATE
         $<$<COMPILE_LANGUAGE:CUDA>:-Xptxas=-v>
         $<$<CONFIG:Debug>:-G>
         $<$<CONFIG:RelWithDebInfo>:-lineinfo>
     )
 
-    install(TARGETS tdp1375_jni DESTINATION lib)
+    install(TARGETS td16_jni DESTINATION lib)
 endif()

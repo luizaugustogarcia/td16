@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 public class GPUSortingSearch {
 
     static {
-        System.loadLibrary("tdp1375_jni");
+        System.loadLibrary("td16_jni");
     }
 
     private static volatile GPUSortingSearch instance;
