@@ -66,6 +66,22 @@ class DirectTwistedBraceletGeneratorTest {
     }
 
     @Test
+    void concurrentCountingMatchesDecodedRepresentativesIncludingEmptyFamilies() {
+        final var partitions = new int[][]{{3}, {3}, {3, 3}, {3, 3}, {4, 4}, {5, 3, 3}};
+        final var orientations = new boolean[][]{
+                {true}, {false}, {false, false}, {true, true}, {true, true}, {true, false, false}};
+        for (var i = 0; i < partitions.length; i++) {
+            final var decoded = new AtomicInteger();
+            DirectTwistedBraceletGenerator.generateRepresentatives(
+                    partitions[i], orientations[i], ignored -> decoded.incrementAndGet());
+            assertEquals(decoded.get(), DirectTwistedBraceletGenerator.countRepresentativesConcurrently(
+                    partitions[i], orientations[i]), Arrays.toString(partitions[i]));
+        }
+        assertEquals(479, DirectTwistedBraceletGenerator.countRepresentativesConcurrently(
+                new int[]{5, 3, 3}, new boolean[]{true, false, false}));
+    }
+
+    @Test
     void sparseComparisonBranchesMatchSequentialGeneration() {
         assertConcurrentGenerationMatchesSequentialGeneration(
                 new int[]{5, 3, 3}, new boolean[]{false, false, false});
