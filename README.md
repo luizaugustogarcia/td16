@@ -10,10 +10,18 @@ The paper proves that the transposition diameter of `S_16` is 9.
 - `checker` is the CPU-only verifier. It independently reconstructs the case
   enumeration, reads the database, and replays every recorded witness without
   performing the emitter's search.
+- `gpu-common` contains the CUDA-independent device/slot layout shared by the
+  emitter and the experiments module. The checker does not depend on it.
 
 The certificate database is the only interface between the two programs. This
 separation is intentional: regenerate it with the emitter when needed, then
 verify it independently with the checker.
+
+The [experiments module](experiments/README.md) contains CPU/GPU diametral
+extension and its audits. Its `count` mode persists canonical distance layers
+with five-bit symbols and asynchronous buffered writes, then feeds those stores
+into the next degree. It does not store sorting witnesses.
+Build and test it separately with `mvn -pl experiments -am verify`.
 
 ## Reproducibility
 
@@ -33,7 +41,7 @@ RocksDB directory when running the checker.
 
 ## Build
 
-Build both modules from the repository root:
+Build the modules from the repository root:
 
 ```bash
 mvn verify
@@ -47,6 +55,13 @@ mvn -pl checker verify
 ```
 
 ## Emit a certificate
+
+Before invoking the emitter separately, install its shared Java dependency
+(this step does not compile CUDA):
+
+```bash
+mvn -pl gpu-common -am install
+```
 
 Choose a writable directory for the RocksDB certificate (the default is
 `./certificates` at the repository root), then run:

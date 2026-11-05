@@ -7,7 +7,7 @@
     <artifactId>td</artifactId>
     <version>1.0</version>
     <packaging>pom</packaging>
-    <modules><module>emitter</module><module>checker</module></modules>
+    <modules><module>gpu-common</module><module>emitter</module><module>checker</module><module>experiments</module></modules>
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

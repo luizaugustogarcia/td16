@@ -4,6 +4,9 @@
 
 # Generated certificate database (RocksDB)
 certificates/
+experiments/data/
+experiments/logs/
+experiments/profiles/
 
 # Native/CMake build products
 **/CMakeFiles/

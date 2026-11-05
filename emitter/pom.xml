@@ -20,6 +20,7 @@
         <tdp.certificateFlushSeconds>5</tdp.certificateFlushSeconds>
     </properties>
     <dependencies>
+        <dependency><groupId>br.unb.cic</groupId><artifactId>gpu-common</artifactId><version>${project.version}</version></dependency>
         <dependency><groupId>colt</groupId><artifactId>colt</artifactId><version>1.2.0</version></dependency>
         <dependency><groupId>com.google.guava</groupId><artifactId>guava</artifactId><version>31.0.1-jre</version></dependency>
         <dependency><groupId>cc.redberry</groupId><artifactId>core</artifactId><version>1.1.10</version></dependency>

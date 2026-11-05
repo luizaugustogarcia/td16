@@ -228,15 +228,14 @@ namespace {
     // Incremental even-cycle delta when applying 3-cycle (a b c) to omega.
     // The move sets: childOmega[a]=omega[c], childOmega[b]=omega[a], childOmega[c]=omega[b].
     //
-    // Returns the delta in odd-cycle count (childEvenCycles - parentEvenCycles),
-    // or INT_MIN if a, b, c span 3 different cycles (move should be skipped).
+    // Returns the delta in odd-cycle count (childEvenCycles - parentEvenCycles).
     //
     // Cases:
     //   All in same cycle, order a→...→b→...→c→...→a: splits into 3 cycles of
     //     sizes (d_ab, d_bc, d_ca). Delta depends on parity of each part.
     //   All in same cycle, order a→...→c→...→b→...→a: cycle stays intact. Delta = 0.
     //   Two in one cycle, one in another: 2 cycles remain 2 cycles with new sizes.
-    //   Three different cycles: skipped (returns INT_MIN).
+    //   Three different cycles: merge into one cycle of their combined length.
     __device__ __forceinline__ int delta_even_cycles(const uint8_t *omega,
                                                      const uint8_t a,
                                                      const uint8_t b,
@@ -275,8 +274,11 @@ namespace {
         // The "full distance" including a itself as a node: segment has d_a elements after a.
 
         if (target_a == a && target_b == b && target_c == c) {
-            // All three loop back to themselves → 3 different cycles. Skip move.
-            return INT_MIN;
+            // Each traced segment is a complete cycle. Joining the three
+            // cycles replaces their odd-cycle contributions by that of the
+            // combined cycle. Three odd cycles give delta -2.
+            const int oldOdd = (d_a & 1) + (d_b & 1) + (d_c & 1);
+            return ((d_a + d_b + d_c) & 1) - oldOdd;
         }
 
         if (target_a == b && target_b == c && target_c == a) {
@@ -433,12 +435,10 @@ namespace {
                         node.omega[p] = static_cast<uint8_t>(omega0[p]);
                     }
 
-                    // Root moves must obey the same restrictions as descendants.
-                    // In particular, do not seed the search with a move that
-                    // merges three distinct cycles.
+                    // Root moves admit the same -2, 0, and 2 deltas as descendants.
                     if (contains_fixed_symbol(node.omega, a, b, c)) continue;
                     const int delta = delta_even_cycles(node.omega, a, b, c);
-                    if (delta != 0 && delta != 2) continue;
+                    if (delta != -2 && delta != 0 && delta != 2) continue;
 
                     node.omega[a] = static_cast<uint8_t>(omega0[c]);
                     node.omega[b] = static_cast<uint8_t>(omega0[a]);
@@ -607,7 +607,7 @@ namespace {
                     if (!contains_fixed_symbol(sh_parent_omega, a, b, c)) {
                         const int delta = delta_even_cycles(sh_parent_omega, a, b, c);
 
-                        if (delta == 0 || delta == 2) {
+                        if (delta == -2 || delta == 0 || delta == 2) {
                             childEvenCycles = parentEvenCycles + delta;
 
                             if (satisfies_rate(ctx, childEvenCycles, childDepth)) {
