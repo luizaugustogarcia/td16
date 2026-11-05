@@ -53,6 +53,50 @@ distance 11 is empty. `extend` is an alias of `count`. The old independent enume
 only as `scan-count`; its documentation is [SCAN_BASELINE.md](docs/SCAN_BASELINE.md).
 No sorting sequences or witnesses are written by the extension.
 
+## GPU prefix prototype
+
+The `prefix-benchmark` mode compares the existing exact GPU sorter with a
+short GPU trie search followed by the same exact sorter on unresolved roots.
+The prototype is isolated from production enumeration and is not enabled by
+`count` or `diameter`.
+
+The trie contains sequences of adjacency gains 0, 1, 2, or 3, through three
+moves. These are fixed adjacencies, distinct from cycle-count changes;
+all block transpositions are considered. Each move acts on the current contracted permutation; sorted strips
+are preserved. A node accepts only when `moves used + TD(contracted degree)
+<= budget`. Branches that cannot meet that condition within the remaining
+depth are omitted. Failure at a partial prefix continues the other viable
+branches, including zero-gain steps. Exhausting the trie leaves the root
+unresolved and invokes complete sorting. TD(18) is bounded by 11 here; its
+unknown value is not assumed to be 10. Prefix misses never prove a distance.
+
+```bash
+bash experiments/run.sh prefix-benchmark
+```
+
+Benchmark settings are JVM properties: `benchmark.n` (12), `benchmark.budget`
+(proven upper bound minus one), `benchmark.jobs` (128), `benchmark.rounds` (3),
+`benchmark.prefixMoves` (3), `benchmark.tableDegree` (8),
+`benchmark.timeoutSeconds` (45 per path), and `benchmark.seed` (20261105).
+Inputs are deterministic random permutations without sorted adjacencies by
+default (`benchmark.irreducible=true`). Timings exclude setup and warm-up,
+include transfers, host buffer compaction and exact fallback, and alternate
+measurement order. A timeout aborts the comparison without a conclusion.
+These synthetic inputs and small pattern tables do not establish performance
+on production extension candidates with larger resident GPU tables.
+
+For JShell, after building the module and exporting the CUDA library path:
+
+```bash
+task_classpath=$(printf '%s:' experiments/target/classes experiments/target/dependency/*.jar)
+task_classpath=${task_classpath%:}
+jshell --class-path "$task_classpath" -R--enable-native-access=ALL-UNNAMED \
+  -R-Dbenchmark.n=12 -R-Dbenchmark.budget=6 -R-Dbenchmark.jobs=4096 \
+  -R-Dbenchmark.tableDegree=9 experiments/scripts/jshell/prefix-benchmark.jsh
+```
+
+The native CMake profile also builds `prefix-search` PTX from the same source.
+
 ## What is retained
 
 The runner requests `D(1)`, then `D(2)`, and so on. Each request generates just
