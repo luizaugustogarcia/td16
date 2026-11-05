@@ -9,7 +9,7 @@ task_native=false
 task_options=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    audit|gpu-benchmark|prefix-benchmark|gpu-audit|count|diameter|extend|extension-plan|extension-benchmark|verify-store|verify-membership|sample-membership|classify-sample|audit-generation|scan-count) task_mode=$1; shift ;;
+    audit|gpu-benchmark|gpu-audit|count|diameter|extend|extension-plan|extension-benchmark|verify-store|verify-membership|sample-membership|classify-sample|audit-generation|scan-count) task_mode=$1; shift ;;
     --no-build) task_build=false; shift ;;
     --max-n) task_options+=("-Dcount.maxN=$2" "-Daudit.maxN=$2"); shift 2 ;;
     --cpu-threads) task_options+=("-Dcount.cpuThreads=$2"); shift 2 ;;

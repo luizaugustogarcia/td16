@@ -7,7 +7,6 @@ public final class ExperimentMain {
         switch(mode) {
             case "audit"->DiametralExtensionAudit.run(Integer.getInteger("audit.maxN",9));
             case "gpu-benchmark"->GpuDiametralFilter.benchmark();
-            case "prefix-benchmark"->PrefixBenchmark.run();
             case "gpu-audit"->GpuCounterAudit.run();
             case "sample-membership"->MembershipDiagnostics.sample();
             case "classify-sample"->MembershipDiagnostics.classify();
@@ -36,7 +35,7 @@ public final class ExperimentMain {
                 Integer.getInteger("count.cpuThreads",Runtime.getRuntime().availableProcessors()),
                 Double.parseDouble(System.getProperty("count.vramFraction","0.90")),
                 Boolean.parseBoolean(System.getProperty("count.gpu","true")));
-            default->throw new IllegalArgumentException("Modes: diameter, count/extend, extension-plan, extension-benchmark, prefix-benchmark, scan-count, verify-membership, audit, gpu-benchmark, gpu-audit");
+            default->throw new IllegalArgumentException("Modes: diameter, count/extend, extension-plan, extension-benchmark, scan-count, verify-membership, audit, gpu-benchmark, gpu-audit");
         }
     }
 }
