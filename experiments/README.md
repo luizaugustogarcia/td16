@@ -77,11 +77,17 @@ bash experiments/run.sh prefix-benchmark
 Benchmark settings are JVM properties: `benchmark.n` (12), `benchmark.budget`
 (proven upper bound minus one), `benchmark.jobs` (128), `benchmark.rounds` (3),
 `benchmark.prefixMoves` (3), `benchmark.tableDegree` (8),
-`benchmark.timeoutSeconds` (45 per path), and `benchmark.seed` (20261105).
+`benchmark.timeoutSeconds` (45 per batch and path), and `benchmark.seed` (20261105).
+`benchmark.batchJobs` (131072) bounds GPU workspaces and controls progress
+granularity. `benchmark.warmupJobs` (4096) bounds warm-up work independently
+of the sample size. Both are capped at the actual number of inputs.
 Inputs are deterministic random permutations without sorted adjacencies by
-default (`benchmark.irreducible=true`). Timings exclude setup and warm-up,
-include transfers, host buffer compaction and exact fallback, and alternate
-measurement order. A timeout aborts the comparison without a conclusion.
+default (`benchmark.irreducible=true`); `benchmark.unique=true` requests
+sampling without replacement. Timings exclude setup and warm-up, include
+transfers, host buffer compaction and exact fallback, and alternate measurement
+order between batches and rounds. Each batch compares every decision and
+logs cumulative times and certificate counts. A timeout aborts the comparison
+without a conclusion.
 These synthetic inputs and small pattern tables do not establish performance
 on production extension candidates with larger resident GPU tables.
 
@@ -94,6 +100,11 @@ jshell --class-path "$task_classpath" -R--enable-native-access=ALL-UNNAMED \
   -R-Dbenchmark.n=12 -R-Dbenchmark.budget=6 -R-Dbenchmark.jobs=4096 \
   -R-Dbenchmark.tableDegree=9 experiments/scripts/jshell/prefix-benchmark.jsh
 ```
+
+For a larger comparison, use `-R-Dbenchmark.jobs=2097152`,
+`-R-Dbenchmark.unique=true`, `-R-Dbenchmark.rounds=1`, and
+`-R-Dbenchmark.timeoutSeconds=1800`. Redirect JShell output to a log file
+to follow batch completions and active-stage messages during long batches.
 
 The native CMake profile also builds `prefix-search` PTX from the same source.
 
