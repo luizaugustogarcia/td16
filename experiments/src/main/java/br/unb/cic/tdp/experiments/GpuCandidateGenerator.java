@@ -9,18 +9,18 @@ import static jcuda.driver.JCudaDriver.*;
 
 /** All insertion, orbit, canonicalization and deletion mathematics run in CUDA. */
 final class GpuCandidateGenerator implements AutoCloseable {
-    record Output(byte[] packed,byte[] deletionKeys,int count){}
+    record Output(byte[] packed,byte[] deletionKeys,byte[] rootMoveKeys,byte[] rootMoveFlags,int count){}
     final GpuStreamingCounter gpu;
     final ExtensionResolver resolver;
     final CanonicalLayerStore parents;
     final int n,floor,parentFloor,capacity,rawCapacity,payloadBytes,outBytes;
-    final boolean dense;
+    final boolean dense,rootMoveStorePrepass;
     final int lookupKind;
     final CUstream stream=new CUstream();
-    final CUfunction prepare=new CUfunction(),generate=new CUfunction();
+    final CUfunction prepare=new CUfunction(),generate=new CUfunction(),prepareRootMoves=new CUfunction();
     final CUevent start=new CUevent(),end=new CUevent(),completion=new CUevent();
-    final CUdeviceptr rows=new CUdeviceptr(),members=new CUdeviceptr(),output=new CUdeviceptr(),keys=new CUdeviceptr(),counts=new CUdeviceptr();
-    final Pointer hostRows=new Pointer(),hostOutput=new Pointer(),hostKeys=new Pointer(),hostCounts=new Pointer();
+    final CUdeviceptr rows=new CUdeviceptr(),members=new CUdeviceptr(),output=new CUdeviceptr(),keys=new CUdeviceptr(),counts=new CUdeviceptr(),cuts=new CUdeviceptr(),rootMoveKeys=new CUdeviceptr(),rootMoveFlags=new CUdeviceptr();
+    final Pointer hostRows=new Pointer(),hostOutput=new Pointer(),hostKeys=new Pointer(),hostCounts=new Pointer(),hostRootMoveKeys=new Pointer(),hostRootMoveFlags=new Pointer();
     final List<CUdeviceptr> deviceAllocations=new ArrayList<>();
     final List<Pointer> hostAllocations=new ArrayList<>();
     boolean streamReady,closed;
@@ -34,24 +34,31 @@ final class GpuCandidateGenerator implements AutoCloseable {
         payloadBytes=PackedPermutation5.bytes(n+1);outBytes=payloadBytes+10;rawCapacity=Math.multiplyExact(capacity,2*n*n);
         this.gpu=resolver.retainDevice(deviceIndex);
         lookupKind=gpu.parentLookupKind(n-1,parentFloor);dense=lookupKind!=0;
+        rootMoveStorePrepass=gpu.rootMovePrepass(parentFloor)&&parents.manifest.floor<=parentFloor&&parents.manifest.maxDistance==RetentionPlan.upper(n-1);
         try {
             cuCtxSetCurrent(gpu.context.context);cuStreamCreate(stream,CUstream_flags.CU_STREAM_NON_BLOCKING);streamReady=true;
             cuEventCreate(start,0);eventCount=1;cuEventCreate(end,0);eventCount=2;
             cuEventCreate(completion,CUevent_flags.CU_EVENT_BLOCKING_SYNC|CUevent_flags.CU_EVENT_DISABLE_TIMING);eventCount=3;
             cuModuleGetFunction(prepare,gpu.module,"prepare_parent_members");cuModuleGetFunction(generate,gpu.module,"generate_extensions");
+            cuModuleGetFunction(prepareRootMoves,gpu.module,"prepare_root_move_keys");
             allocate(rows,(long)capacity*parents.rowBytes);allocate(members,(long)capacity*2*n*8);
             allocate(output,(long)rawCapacity*outBytes);allocate(counts,24);
             allocate(keys,dense?1:(long)rawCapacity*n*parents.payloadBytes);
+            int[] moveCuts=ExactSorter.cuts(n);allocate(cuts,moveCuts.length*4L);cuMemcpyHtoD(cuts,Pointer.to(moveCuts),moveCuts.length*4L);
+            allocate(rootMoveKeys,rootMoveStorePrepass?(long)rawCapacity*parents.payloadBytes:1);allocate(rootMoveFlags,rootMoveStorePrepass?rawCapacity:1);
             pin(hostRows,(long)capacity*parents.rowBytes);pin(hostOutput,(long)rawCapacity*outBytes);pin(hostCounts,24);
             if(!dense)pin(hostKeys,(long)rawCapacity*n*parents.payloadBytes);
-            System.out.printf("GPU_GENERATOR device=%d n=%d parent_batch=%d orbit_expansion=GPU canonicality=GPU deletion_canonicality=GPU lookups=%s%n",gpu.context.deviceOrdinal,n,capacity,lookupKind==2?"GPU-membership-bitmap":dense?"GPU-resident-exact-table":"RocksDB-batched-IO");
+            if(rootMoveStorePrepass){pin(hostRootMoveKeys,(long)rawCapacity*parents.payloadBytes);pin(hostRootMoveFlags,rawCapacity);}
+            System.out.printf("GPU_GENERATOR device=%d n=%d parent_batch=%d orbit_expansion=GPU canonicality=GPU deletion_canonicality=GPU lookups=%s root_move_store_prepass=%s%n",gpu.context.deviceOrdinal,n,capacity,lookupKind==2?"GPU-membership-bitmap":dense?"GPU-resident-exact-table":"RocksDB-batched-IO",rootMoveStorePrepass);
         }catch(RuntimeException|Error failure){close();throw failure;}
     }
     private void allocate(CUdeviceptr pointer,long bytes){cuMemAlloc(pointer,bytes);deviceAllocations.add(pointer);}
     private void pin(Pointer pointer,long bytes){cuMemAllocHost(pointer,bytes);hostAllocations.add(pointer);}
     static long deviceBytes(int n,int capacity,boolean dense) {
         long payload=PackedPermutation5.bytes(n+1),parentPayload=PackedPermutation5.bytes(n),raw=Math.multiplyExact((long)capacity,2L*n*n);
-        return Math.addExact((long)capacity*(parentPayload+1+2L*n*8)+24,Math.addExact(raw*(payload+10),dense?1:raw*n*parentPayload));
+        long rootMoves=raw*(parentPayload+1);
+        return Math.addExact((long)capacity*(parentPayload+1+2L*n*8)+24+4L*(n+1)*n*(n-1)/6,
+            Math.addExact(raw*(payload+10)+rootMoves,dense?1:raw*n*parentPayload));
     }
     private void synchronize(){if(eventCount>2){cuEventRecord(completion,stream);cuEventSynchronize(completion);}else cuStreamSynchronize(stream);}
     Output produce(byte[] input,ExtensionRun.Stats stats,ExtensionResolver resolver) throws IOException {
@@ -70,23 +77,47 @@ final class GpuCandidateGenerator implements AutoCloseable {
         if(totals[5]!=0)throw new IOException("GPU extension bounds or complete parent index inconsistent");
         stats.parents.addAndGet(records);stats.generated.addAndGet(totals[4]);stats.canonical.addAndGet(totals[1]);stats.rejected.addAndGet(totals[2]);stats.determined.addAndGet(totals[3]);
         int count=totals[0];if(count==0)return null;
+        byte[] moveKeys=null,moveFlags=null;
+        if(rootMoveStorePrepass) {
+            int cutCount=ExactSorter.cuts(n).length;
+            cuLaunchKernel(prepareRootMoves,(count+127)/128,1,1,128,1,1,0,stream,Pointer.to(GpuStreamingCounter.integer(count),GpuStreamingCounter.integer(n),
+                GpuStreamingCounter.integer(outBytes),Pointer.to(output),Pointer.to(cuts),GpuStreamingCounter.integer(cutCount),Pointer.to(rootMoveKeys),Pointer.to(rootMoveFlags)),null);
+            moveKeys=new byte[Math.multiplyExact(count,parents.payloadBytes)];moveFlags=new byte[count];
+            cuMemcpyDtoHAsync(hostRootMoveKeys,rootMoveKeys,moveKeys.length,stream);cuMemcpyDtoHAsync(hostRootMoveFlags,rootMoveFlags,count,stream);
+        }
         byte[] packed=new byte[Math.multiplyExact(count,outBytes)];
         cuMemcpyDtoHAsync(hostOutput,output,packed.length,stream);
         byte[] deletionKeys=null;
         if(!dense){deletionKeys=new byte[Math.multiplyExact(count,n*parents.payloadBytes)];cuMemcpyDtoHAsync(hostKeys,keys,deletionKeys.length,stream);}
         synchronize();hostOutput.getByteBuffer(0,packed.length).get(packed);
         if(!dense)hostKeys.getByteBuffer(0,deletionKeys.length).get(deletionKeys);
-        return new Output(packed,deletionKeys,count);
+        if(rootMoveStorePrepass){hostRootMoveKeys.getByteBuffer(0,moveKeys.length).get(moveKeys);hostRootMoveFlags.getByteBuffer(0,count).get(moveFlags);}
+        return new Output(packed,deletionKeys,moveKeys,moveFlags,count);
     }
     /** CPU work is buffer handling and persistent-index I/O; no mathematical search. */
     void consume(Output packet,ExtensionRun.Stats stats,AsyncCanonicalWriter writer,ExtensionResolver resolver) throws IOException {
         // Large MultiGets pin too many SST blocks. Consume bounded slices instead of constructing millions of keys.
-        final int chunk=128;
+        final int chunk=128;boolean[] rootMoveSettled=resolveRootMoves(packet);
         try(AsyncCanonicalWriter.Buffer stored=writer.buffer();ExtensionResolver.Pending unknown=resolver.buffer(null)) {
-            for(int first=0;first<packet.count&&!writer.hasMatch();first+=chunk)consumeSlice(packet,first,Math.min(packet.count,first+chunk),stats,writer,resolver,stored,unknown);
+            for(int first=0;first<packet.count&&!writer.hasMatch();first+=chunk)consumeSlice(packet,rootMoveSettled,first,Math.min(packet.count,first+chunk),stats,writer,resolver,stored,unknown);
         }
     }
-    private void consumeSlice(Output packet,int first,int end,ExtensionRun.Stats stats,AsyncCanonicalWriter writer,ExtensionResolver resolver,
+    private boolean[] resolveRootMoves(Output packet) throws IOException {
+        boolean[] settled=new boolean[packet.count];if(packet.rootMoveKeys==null)return settled;
+        for(byte flag:packet.rootMoveFlags)if(flag==2)throw new IOException("Qualifying root move did not create a contractible bond");
+        for(int budget=Math.max(parentFloor,parents.manifest.floor);budget<=RetentionPlan.upper(n-1);budget++) {
+            int queriesCount=0;for(int i=0;i<packet.count;i++)if(packet.rootMoveFlags[i]==1&&(packet.packed[i*outBytes+8]&15)==budget)queriesCount++;
+            if(queriesCount==0)continue;
+            byte[][] queries=new byte[queriesCount][];int[] candidates=new int[queriesCount];int q=0;
+            for(int i=0;i<packet.count;i++)if(packet.rootMoveFlags[i]==1&&(packet.packed[i*outBytes+8]&15)==budget) {
+                int offset=i*parents.payloadBytes;queries[q]=Arrays.copyOfRange(packet.rootMoveKeys,offset,offset+parents.payloadBytes);candidates[q++]=i;
+            }
+            int[] found=parents.distances(queries,budget);
+            for(int i=0;i<found.length;i++)if(found[i]<0)settled[candidates[i]]=true;
+        }
+        return settled;
+    }
+    private void consumeSlice(Output packet,boolean[] rootMoveSettled,int first,int end,ExtensionRun.Stats stats,AsyncCanonicalWriter writer,ExtensionResolver resolver,
                               AsyncCanonicalWriter.Buffer stored,ExtensionResolver.Pending unknown) throws IOException {
         resolver.check();byte[] packed=packet.packed,deletionKeys=packet.deletionKeys;
         int[] answers=null;int unresolved=0;
@@ -118,8 +149,13 @@ final class GpuCandidateGenerator implements AutoCloseable {
                     int upper=Math.min(minimum+1,RetentionPlan.upper(n));if(maximum>upper)throw new IOException("Inconsistent deletion interval");
                     if(upper<floor)continue;
                     if(maximum==upper){stored.appendPacked(packed,offset+9,maximum,weight);stats.determined.incrementAndGet();}
+                    else if(rootMoveSettled[i]){if(maximum>=floor)stored.appendPacked(packed,offset+9,maximum,weight);stats.determined.incrementAndGet();stats.rootMoveResolved.incrementAndGet();}
                     else unknown.appendRank(rank,packed,offset+9,maximum,weight);
-                }else if((metadata&0x80)!=0)unknown.appendRank(rank,packed,offset+9,metadata&15,weight);
+                }else if((metadata&0x80)!=0) {
+                    int budget=metadata&15;
+                    if(rootMoveSettled[i]){if(budget>=floor)stored.appendPacked(packed,offset+9,budget,weight);stats.determined.incrementAndGet();stats.rootMoveResolved.incrementAndGet();}
+                    else unknown.appendRank(rank,packed,offset+9,budget,weight);
+                }
                 else stored.appendPacked(packed,offset+9,metadata,weight);
             }
     }

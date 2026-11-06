@@ -42,7 +42,8 @@ class OddLengthOrientedCyclesTest {
             "9, 506, 3, 2",
             "11, 3391, 2, 1",
             "13, 23619, 4, 3",
-            "17, 1243098, 4, 3"
+            "17, 1243098, 4, 3",
+            "19, 9304845, 3, 2"
     })
     void survivingEnumerationMatchesRouteOClassification(
             final int cycleLength,
@@ -84,6 +85,23 @@ class OddLengthOrientedCyclesTest {
                 "(0 7 1 8 2 9 3 10 4 11 5 12 6)",
                 "(0 10 7 4 1 11 8 5 2 12 9 6 3)",
                 "(0 11 9 7 5 3 1 12 10 8 6 4 2)"), orientedCycles);
+    }
+
+    @Test
+    void lengthNineteenRetainsOnlyTwoRealizableOrientedOrbits() {
+        final var beta = canonicalCycle(19);
+        final var candidates = OddLengthOrientedCycles.enumerateSurvivingCycles(19)
+                .cycles().stream().map(Cycle::of)
+                .filter(cycle -> CommonOperations.isOriented(beta, cycle))
+                .map(cycle -> new CyclicTargetCandidate(
+                        new MulticyclePermutation(cycle), beta))
+                .collect(Collectors.toMap(
+                        CyclicTargetCandidate::twistedBraceletKey, candidate -> candidate,
+                        (left, right) -> left));
+
+        assertEquals(2, candidates.size());
+        assertTrue(candidates.values().stream()
+                .allMatch(CyclicTargetCandidate::formsCyclicTargetPair));
     }
 
     @Test

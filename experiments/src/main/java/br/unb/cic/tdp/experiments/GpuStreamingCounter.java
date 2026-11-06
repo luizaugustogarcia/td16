@@ -21,6 +21,12 @@ final class GpuStreamingCounter implements AutoCloseable {
     int tableDegree;
     final int[] patternFloors=new int[19];
     final int quantum;
+    final boolean slackMoveFilter;
+    final boolean rootDeletionPrepass;
+    final boolean rootMovePrepass;
+    final boolean oddCyclePrepass;
+    final boolean rootMoveAutomatic;
+    final int rootMoveMinBudget;
     boolean moduleReady,tableReady,offsetsReady;
     long tableBytes;
     GpuStreamingCounter(SmallTables tables) throws Exception {
@@ -32,13 +38,23 @@ final class GpuStreamingCounter implements AutoCloseable {
     GpuStreamingCounter(SmallTables tables,int quantum,int deviceOrdinal) throws Exception {
         if(quantum<1)throw new IllegalArgumentException("GPU quantum must be positive");
         this.quantum=quantum;
+        slackMoveFilter=Boolean.parseBoolean(System.getProperty("extension.slackMoveFilter","true"));
+        rootDeletionPrepass=Boolean.parseBoolean(System.getProperty("extension.rootDeletionPrepass","true"));
+        String rootMoves=System.getProperty("extension.rootMovePrepass","auto");
+        if(!rootMoves.equals("auto")&&!rootMoves.equals("true")&&!rootMoves.equals("false"))
+            throw new IllegalArgumentException("extension.rootMovePrepass must be auto, true, or false");
+        rootMovePrepass=!rootMoves.equals("false");rootMoveAutomatic=rootMoves.equals("auto");
+        rootMoveMinBudget=Integer.getInteger("extension.rootMoveMinBudget",8);
+        if(rootMoveMinBudget<0||rootMoveMinBudget>11)throw new IllegalArgumentException("extension.rootMoveMinBudget must be 0..11");
+        oddCyclePrepass=Boolean.parseBoolean(System.getProperty("extension.oddCyclePrepass","true"));
         context=new GpuDiametralFilter(deviceOrdinal);tableDegree=tables==null?-1:tables.degree;
         Arrays.fill(patternFloors,Integer.MAX_VALUE);
         if(tables!=null)Arrays.fill(patternFloors,0,tableDegree+1,0);
         try {
             boolean soa=Boolean.parseBoolean(System.getProperty("extension.gpuSoa","true"));
             String ptx=ExperimentResources.ptx("streaming-count-"+(soa?"soa":"aos"),context.architecture,
-                ()->ExperimentResources.read("cuda/streaming-count.cu"),"--define-macro="+(soa?"SOA_STACK":"AOS_STACK"));
+                ()->ExperimentResources.emitterCycleFunctions()+ExperimentResources.read("cuda/streaming-count.cu"),
+                "--define-macro="+(soa?"SOA_STACK":"AOS_STACK"));
             cuModuleLoadData(module,ptx);moduleReady=true;
             verifyPatternLayout();
             cuModuleGetFunction(filterRoots,module,"filter_count_roots");
@@ -120,6 +136,8 @@ final class GpuStreamingCounter implements AutoCloseable {
         if(source.membership==null||tableDegree>=source.membership.degree&&patternFloors[source.membership.degree]!=Integer.MAX_VALUE)return false;
         membership=source.membership.copyTo(this,budget);return membership!=null;
     }
+    boolean rootMovePrepass(int budget){return rootMovePrepass&&(!rootMoveAutomatic||budget>=rootMoveMinBudget);}
+    boolean oddCyclePrepass(int n,int budget){return oddCyclePrepass&&n==18&&budget>=10;}
     /** Context-safe staged copies avoid rebuilding the same pattern table on every GPU. */
     boolean copyPatternTablesFrom(GpuStreamingCounter source) {
         return copyPatternTablesFrom(source,new GpuCacheBudget(0,0.90));
@@ -209,6 +227,23 @@ final class GpuStreamingCounter implements AutoCloseable {
             System.out.printf("FIXED-SIGMA CANONICALITY n=%d representatives=%d weighted=%d PASS%n",n,representatives,sum);
         }finally{cuMemFree(output);}
     }
+    void auditSlackMoveDeltas() {
+        activate();CUfunction audit=new CUfunction();cuModuleGetFunction(audit,module,"audit_slack_move_deltas");
+        CUdeviceptr deviceCuts=new CUdeviceptr(),errors=new CUdeviceptr();
+        cuMemAlloc(deviceCuts,ExactSorter.cuts(8).length*4L);cuMemAlloc(errors,8);
+        try {
+            for(int n=2;n<=8;n++) {
+                int[] cuts=ExactSorter.cuts(n);long jobs=SmallTables.FACTORIAL[n]*cuts.length;
+                cuMemcpyHtoD(deviceCuts,Pointer.to(cuts),cuts.length*4L);cuMemsetD32(errors,0,2);
+                cuLaunchKernel(audit,(int)((jobs+255)/256),1,1,256,1,1,0,null,
+                    Pointer.to(number(jobs),integer(n),Pointer.to(deviceCuts),integer(cuts.length),Pointer.to(errors)),null);
+                long[] failures={0};cuMemcpyDtoH(Pointer.to(failures),errors,8);
+                if(failures[0]!=0)throw new AssertionError("Slack move-delta mapping mismatch at n="+n+": "+failures[0]);
+                System.out.printf("SLACK MOVE AUDIT n=%d permutations=%d cuts=%d queries=%d PASS%n",
+                    n,SmallTables.FACTORIAL[n],cuts.length,jobs);
+            }
+        }finally{cuMemFree(errors);cuMemFree(deviceCuts);}
+    }
     void verifyStoredHistogram(LayerManifest manifest) {
         activate();
         int n=manifest.degree;if(n>tableDegree)throw new IllegalArgumentException("Store exceeds resident GPU pattern table");
@@ -231,7 +266,7 @@ final class GpuStreamingCounter implements AutoCloseable {
         return (int)Math.max(1,Math.min(Integer.MAX_VALUE-256,((long)(free[0]*fraction)-fixedBatchBytes(n))/bytesPerJob(n,high)));
     }
     static long bytesPerJob(int n,int frames){return (long)frames*(n+2)+20+PackedPermutation5.bytes(n+1);}
-    static long fixedBatchBytes(int n){return 36+4L*n*(n+1)*(n-1)/6;}
+    static long fixedBatchBytes(int n){return 44+4L*n*(n+1)*(n-1)/6;}
     static int capacityForBudget(int n,int frames,int requested,long bytes) {
         long capacity=(bytes-fixedBatchBytes(n))/bytesPerJob(n,frames);
         if(capacity<1)throw new IllegalArgumentException("GPU slot memory budget is too small for one search state");
@@ -239,12 +274,13 @@ final class GpuStreamingCounter implements AutoCloseable {
     }
     final class Batch implements AutoCloseable {
         final int n,low,high,capacity;
+        final boolean filterSlackMoves,prepassRootDeletions,prepassRootMoves,prepassOddCycles;
         final CUstream stream;
         final Pointer hostRanks=new Pointer(),hostResults=new Pointer(),hostProgress=new Pointer(),hostKeys=new Pointer();
         final CUevent timedStart=new CUevent(),timedEnd=new CUevent(),completion=new CUevent();
         int pinnedCount,eventCount;
         boolean closed;
-        long launches,activeJobs,tinyWaves;double kernelMillis;
+        long launches,activeJobs,tinyWaves,oddCycleResolved;double kernelMillis;
         final List<CUdeviceptr> allocations=new ArrayList<>();
         final List<CUdeviceptr> stateAllocations=new ArrayList<>();
         final CUdeviceptr roots,weights,activeCount,counters,cuts,rootKeys;
@@ -257,18 +293,30 @@ final class GpuStreamingCounter implements AutoCloseable {
             this(n,low,high,capacity,null);
         }
         Batch(int n,int low,int high,int capacity,CUstream stream) {
+            this(n,low,high,capacity,stream,slackMoveFilter,rootDeletionPrepass,rootMovePrepass(low-1),oddCyclePrepass(n,high-1));
+        }
+        Batch(int n,int low,int high,int capacity,CUstream stream,boolean filterSlackMoves) {
+            this(n,low,high,capacity,stream,filterSlackMoves,rootDeletionPrepass,rootMovePrepass(low-1),oddCyclePrepass(n,high-1));
+        }
+        Batch(int n,int low,int high,int capacity,CUstream stream,boolean filterSlackMoves,boolean prepassRootDeletions) {
+            this(n,low,high,capacity,stream,filterSlackMoves,prepassRootDeletions,rootMovePrepass(low-1),oddCyclePrepass(n,high-1));
+        }
+        Batch(int n,int low,int high,int capacity,CUstream stream,boolean filterSlackMoves,boolean prepassRootDeletions,boolean prepassRootMoves) {
+            this(n,low,high,capacity,stream,filterSlackMoves,prepassRootDeletions,prepassRootMoves,oddCyclePrepass(n,high-1));
+        }
+        Batch(int n,int low,int high,int capacity,CUstream stream,boolean filterSlackMoves,boolean prepassRootDeletions,boolean prepassRootMoves,boolean prepassOddCycles) {
             this.n=n;this.low=low;this.high=high;this.capacity=capacity;
-            this.stream=stream;
+            this.stream=stream;this.filterSlackMoves=filterSlackMoves;this.prepassRootDeletions=prepassRootDeletions;this.prepassRootMoves=prepassRootMoves;this.prepassOddCycles=prepassOddCycles;
             activate();
             try {
                 roots=allocate(capacity*8L);
                 rootKeys=allocate((long)capacity*PackedPermutation5.bytes(n+1));
                 weights=allocate(capacity);
-                activeCount=allocate(4);counters=allocate(32);
+                activeCount=allocate(4);counters=allocate(40);
                 int[] moves=ExactSorter.cuts(n);cutCount=moves.length;
                 cuts=allocate(moves.length*4L);cuMemcpyHtoD(cuts,Pointer.to(moves),moves.length*4L);
                 if(stream!=null){cuMemAllocHost(hostRanks,capacity*8L);pinnedCount=1;cuMemAllocHost(hostResults,capacity);pinnedCount=2;
-                    cuMemAllocHost(hostProgress,32);pinnedCount=3;cuMemAllocHost(hostKeys,(long)capacity*PackedPermutation5.bytes(n+1));pinnedCount=4;
+                    cuMemAllocHost(hostProgress,40);pinnedCount=3;cuMemAllocHost(hostKeys,(long)capacity*PackedPermutation5.bytes(n+1));pinnedCount=4;
                     cuEventCreate(timedStart,0);eventCount=1;cuEventCreate(timedEnd,0);eventCount=2;
                     cuEventCreate(completion,CUevent_flags.CU_EVENT_BLOCKING_SYNC|CUevent_flags.CU_EVENT_DISABLE_TIMING);eventCount=3;
                     // cuMemcpyHtoD(cuts,...) may return after staging pageable memory.
@@ -295,7 +343,7 @@ final class GpuStreamingCounter implements AutoCloseable {
         long[] count(long first,int jobs,Consumer<long[]> progress,IntSupplier idle,LongConsumer steal) {
             activate();
             if(jobs<1||jobs>scanCapacity())throw new IllegalArgumentException("Invalid batch size");
-            cuMemsetD32(counters,0,6);
+            cuMemsetD32(counters,0,10);
             cuMemsetD32(activeCount,0,1);
             final int slice=262144;
             for(int begin=0;begin<jobs;begin+=slice) {
@@ -340,7 +388,7 @@ final class GpuStreamingCounter implements AutoCloseable {
                     int size=Math.min(slice,pending-begin);
                     Pointer args=Pointer.to(integer(pending),integer(begin),Pointer.to(input),Pointer.to(output),
                         Pointer.to(activeCount),integer(n),integer(high),integer(stateCapacity),integer(low),integer(high),integer(quantum),
-                        Pointer.to(cuts),integer(cutCount),Pointer.to(stack),Pointer.to(next),Pointer.to(depth),
+                        Pointer.to(cuts),integer(cutCount),integer(filterSlackMoves?1:0),integer(prepassRootDeletions?1:0),integer(prepassRootMoves?1:0),integer(prepassOddCycles?1:0),Pointer.to(stack),Pointer.to(next),Pointer.to(depth),
                         Pointer.to(stage),Pointer.to(weights),Pointer.to(results),Pointer.to(table),Pointer.to(offsets),integer(tableDegree),
                         Pointer.to(membershipBits()),integer(membershipDegree()),integer(membershipDistance()),Pointer.to(counters));
                     cuLaunchKernel(advance,(size+255)/256,1,1,256,1,1,0,null,args,null);
@@ -374,9 +422,9 @@ final class GpuStreamingCounter implements AutoCloseable {
         byte[] classifyRanks(long[] ranks,int jobs,Runnable cancellationCheck,byte[] expectedKeys,int keyOffset) {
             activate();
             if(low!=high||jobs<1||jobs>capacity||jobs>ranks.length)throw new IllegalArgumentException("Invalid supplied-rank batch");
-            if(stream==null){cuMemcpyHtoD(roots,Pointer.to(ranks),jobs*8L);cuMemsetD8(weights,(byte)1,jobs);cuMemsetD32(counters,0,8);}
+            if(stream==null){cuMemcpyHtoD(roots,Pointer.to(ranks),jobs*8L);cuMemsetD8(weights,(byte)1,jobs);cuMemsetD32(counters,0,10);}
             else {hostRanks.getByteBuffer(0,jobs*8L).order(ByteOrder.nativeOrder()).asLongBuffer().put(ranks,0,jobs);
-                cuMemcpyHtoDAsync(roots,hostRanks,jobs*8L,stream);cuMemsetD8Async(weights,(byte)1,jobs,stream);cuMemsetD32Async(counters,0,8,stream);}
+                cuMemcpyHtoDAsync(roots,hostRanks,jobs*8L,stream);cuMemsetD8Async(weights,(byte)1,jobs,stream);cuMemsetD32Async(counters,0,10,stream);}
             if(expectedKeys!=null) {
                 int bytes=Math.multiplyExact(jobs,PackedPermutation5.bytes(n+1));
                 if(keyOffset<0||keyOffset>expectedKeys.length-bytes)throw new IllegalArgumentException("Malformed expected root keys");
@@ -401,7 +449,7 @@ final class GpuStreamingCounter implements AutoCloseable {
                     int size=Math.min(slice,pending-begin);
                     Pointer args=Pointer.to(integer(pending),integer(begin),Pointer.to(input),Pointer.to(output),
                         Pointer.to(activeCount),integer(n),integer(high),integer(stateCapacity),integer(low),integer(high),integer(quantum),
-                        Pointer.to(cuts),integer(cutCount),Pointer.to(stack),Pointer.to(next),Pointer.to(depth),
+                        Pointer.to(cuts),integer(cutCount),integer(filterSlackMoves?1:0),integer(prepassRootDeletions?1:0),integer(prepassRootMoves?1:0),integer(prepassOddCycles?1:0),Pointer.to(stack),Pointer.to(next),Pointer.to(depth),
                         Pointer.to(stage),Pointer.to(weights),Pointer.to(results),Pointer.to(table),Pointer.to(offsets),integer(tableDegree),
                         Pointer.to(membershipBits()),integer(membershipDegree()),integer(membershipDistance()),Pointer.to(counters));
                     cuLaunchKernel(advance,(size+255)/256,1,1,256,1,1,0,stream,args,null);
@@ -413,12 +461,13 @@ final class GpuStreamingCounter implements AutoCloseable {
                     pending=hostProgress.getByteBuffer(0,4).order(ByteOrder.nativeOrder()).getInt();}
                 CUdeviceptr swap=input;input=output;output=swap;
             }
-            long[] totals=new long[4];
-            if(stream==null)cuMemcpyDtoH(Pointer.to(totals),counters,32);
-            else {cuMemcpyDtoHAsync(hostProgress,counters,32,stream);cuMemcpyDtoHAsync(hostResults,results,jobs,stream);synchronize();
-                hostProgress.getByteBuffer(0,32).order(ByteOrder.nativeOrder()).asLongBuffer().get(totals);}
+            long[] totals=new long[5];
+            if(stream==null)cuMemcpyDtoH(Pointer.to(totals),counters,40);
+            else {cuMemcpyDtoHAsync(hostProgress,counters,40,stream);cuMemcpyDtoHAsync(hostResults,results,jobs,stream);synchronize();
+                hostProgress.getByteBuffer(0,40).order(ByteOrder.nativeOrder()).asLongBuffer().get(totals);}
             if(totals[3]!=0)throw new AssertionError("GPU input ranks disagree with "+totals[3]+" packed root keys");
             if(totals[0]!=jobs)throw new AssertionError("Supplied-rank GPU search lost jobs");
+            oddCycleResolved=totals[4];
             byte[] decisions=new byte[jobs];if(stream==null)cuMemcpyDtoH(Pointer.to(decisions),results,jobs);else hostResults.getByteBuffer(0,jobs).get(decisions);
             int positive=0;for(byte decision:decisions){if(decision!=0&&decision!=1)throw new AssertionError("Invalid supplied-rank result");positive+=decision;}
             if(positive!=totals[1])throw new AssertionError("GPU result bytes disagree with classification counters");

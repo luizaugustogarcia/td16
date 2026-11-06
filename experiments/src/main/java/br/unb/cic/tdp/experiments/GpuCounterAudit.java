@@ -4,6 +4,7 @@ final class GpuCounterAudit {
     static void run() throws Exception {
         try(GpuStreamingCounter gpu=new GpuStreamingCounter(null)) {
             gpu.context.auditMoveDeltas();
+            gpu.auditSlackMoveDeltas();
             for(int n=1;n<=9;n++)gpu.auditCanonicality(n);
             if(new ExactSorter(null).classify(0,1,0,0)!=1)throw new AssertionError("D(1) mismatch");
             System.out.println("COMPLETE SEARCH n=1 |D(1)|=1");

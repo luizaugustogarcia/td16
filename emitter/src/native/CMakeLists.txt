@@ -39,8 +39,8 @@ set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_RUNTIME_LIBRARY Shared)
 
-set(TDP_NATIVE_MAX_N 17)
-set(TDP_NATIVE_MAX_DEPTH 9)
+set(TDP_NATIVE_MAX_N 19)
+set(TDP_NATIVE_MAX_DEPTH 10)
 
 # ── td16_jni (JNI shared library) ───────────────────────────────────────────
 

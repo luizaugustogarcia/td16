@@ -1,0 +1,1013 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{algorithm}[theorem]{Algorithm}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\newcommand{\Sn}{S_n}
+\newcommand{\TD}{\operatorname{TD}}
+\newcommand{\dist}{d_t}
+\newcommand{\E}{\mathcal E}
+\newcommand{\D}{\mathcal D}
+\newcommand{\T}{\mathcal T}
+\newcommand{\CanSort}{\mathsf{CanSort}}
+\newcommand{\canon}{\operatorname{can}}
+\newcommand{\Stab}{\operatorname{Stab}}
+\newcommand{\id}{\iota}
+\newcommand{\code}[1]{\texttt{#1}}
+
+% This switch is intentionally true until the exhaustive degree-18 run and
+% its independent verification have been completed and archived.
+\newif\ifdraftstatus
+\draftstatustrue
+
+\title{An Exact Deletion--Extension Approach to the\\
+  Block-Transposition Diameter of $S_{18}$}
+\author{Author list and affiliations to be finalized}
+\date{Working paper, \today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The block-transposition diameter $\TD(n)$ is the largest minimum number of
+adjacent-block swaps required to sort a permutation in $S_n$.  The known value
+$\TD(17)=10$ and the one-symbol deletion inequality imply
+$10\leq\TD(18)\leq11$.  We develop an exact deletion--extension computation
+which decides between these two values without enumerating the distance-ten
+layer in $S_{18}$.  Complete exact layers in degree $n-1$ are expanded through
+their full extended-toric orbits, the new maximum symbol is inserted in every
+position, and every surviving canonical child is resolved by deletion bounds
+or exhaustive bounded search.  The search uses the odd-cycle lower bound,
+distance-preserving contractions, a slack-exact move filter, and a generalized
+root prepass based on all standardized one-symbol deletions.  Two further root
+reductions use qualifying odd-cycle covers and a newly verified $N=19$
+support-clearing classification.  We state the
+mathematical completeness conditions, describe the persistent and GPU
+implementation, and report exhaustive small-degree audits and controlled
+microbenchmarks.  Completion of the distance-eleven search with an empty
+result proves $\TD(18)=10$; a surviving child instead proves
+$\TD(18)=11$.
+\end{abstract}
+
+\ifdraftstatus
+\begin{center}
+\fcolorbox{red!60!black}{red!4}{%
+  \begin{minipage}{0.91\linewidth}
+  \textbf{Computational status.}
+  This document is a proof-ready working paper, not yet a claim that
+  $\TD(18)=10$ has been established.  The reduction, implementation, audits,
+  and benchmark are present; the complete degree-18 run and its archived
+  audit artifacts remain pending.  No degree-18 count, running time, hash, or
+  empty result is inferred from a partial computation.
+  \end{minipage}}
+\end{center}
+\fi
+
+\section{Introduction}
+
+A block transposition exchanges two adjacent, nonempty blocks in a
+permutation.  Sorting by block transpositions was introduced in its modern
+form by Bafna and Pevzner~\cite{BafnaPevzner1998}; its diameter problem asks
+for the greatest distance from the identity in the corresponding Cayley
+graph.  Eriksson et al.~\cite{ErikssonEtAl2001} established the general upper
+bound
+\[
+  \TD(n)\leq \left\lfloor\frac{2n-2}{3}\right\rfloor
+  \qquad (n\geq9)
+\]
+and introduced toric equivalence as a central symmetry of the problem.
+Korchmaros supplied a detailed algebraic treatment of the toric maps and
+their distance invariance~\cite{Korchmaros2015,Korchmaros2014}.  Korchmaros
+and Kov\'acs later identified the dihedral factor in the automorphism group
+of the block-transposition Cayley graph~\cite{KorchmarosKovacs2017}.
+Those results justify the root quotient and the orbit--stabilizer weights used
+here.  They do not, without an additional state-canonicalization argument,
+justify quotienting the internal nodes of a bounded search.
+
+The exact value $\TD(16)=9$ was recently obtained by Silva et
+al.~\cite{SilvaEtAl2026}, giving the presently known sequence through degree
+17 and, in particular, $\TD(17)=10$.  Degree 18 is therefore the next
+undecided case.  Deleting any one symbol and standardizing changes distance
+by at most one.  It follows immediately that
+\[
+  10=\TD(17)\leq\TD(18)\leq\TD(17)+1=11.       \tag{1.1}
+\]
+Consequently, the problem is an exact emptiness decision: does any
+permutation in $S_{18}$ have distance 11?
+
+B\'ona and Pittel~\cite{BonaPittel2025} recently counted broad families with
+restricted cycle lengths and used them to obtain many permutations with a
+large block-transposition lower bound.  Their enumerative result does not by
+itself exclude distance 11 in $S_{18}$, but its cycle bound is exactly the
+admissible lower bound used by our DFS.  The underlying 3-cycle length formula
+and cover characterization are due to M\"uhle and
+Nadeau~\cite{MuhleNadeau2019}.  We extract a further algorithmic consequence
+from those facts in Proposition~\ref{prop:slack}: when the remaining budget
+equals the lower bound, only a move increasing the relevant odd-cycle count by
+two can occur on a successful path.
+
+The central idea of this paper is to generate that possible upper layer from
+the complete degree-17 diametral layer, while quotienting by all
+extended-toric symmetries.  This is substantially smaller than a scan of
+$18!$, but symmetry reduction must be used carefully.  Insertion does not
+commute with choosing a single canonical parent.  We therefore expand every
+stored parent through all distinct ordinary members of its symmetry orbit
+\emph{before} inserting the new maximum.  Canonicalization is applied only to
+the resulting children.
+
+The second contribution is an exact bounded-search engine tailored to these
+children.  The odd-cycle lower bound determines which move deltas can still
+fit in the remaining budget.  A complete degree-$(n-1)$ layer also supports a
+root deletion prepass for \emph{every} degree $n$: one sufficiently easy
+deletion proves that the root is sortable within budget, whereas one deletion
+whose exact distance exceeds the budget disproves it.  Neither optimization
+is a degree-18 special case.
+
+Our intended final theorem has the following computational premise.
+
+\begin{theorem}[Target theorem]
+\label{thm:target}
+If the exhaustive computation specified in Sections~\ref{sec:algorithm}
+and~\ref{sec:certificate} completes with no member of $\E(18,11)$, and the
+completion conditions in Theorem~\ref{thm:certificate} are verified, then
+$\TD(18)=10$.
+\end{theorem}
+
+The theorem is presently conditional only because the final exhaustive run
+has not been completed.  All mathematical reductions apply independently of
+the hardware and implementation.
+
+\section{Definitions and conventions}
+\label{sec:definitions}
+
+We write permutations in one-line notation
+$p=[p_1\ p_2\ \cdots\ p_n]\in S_n$ and write
+$\id=[1\ 2\ \cdots\ n]$.  For cuts
+\[
+  0\leq a<b<c\leq n,
+\]
+the block transposition $\tau_{a,b,c}$ sends $p$ to
+\[
+ [p_1\cdots p_a\mid
+   p_{b+1}\cdots p_c\mid
+   p_{a+1}\cdots p_b\mid
+   p_{c+1}\cdots p_n].
+\]
+There are $\binom{n+1}{3}$ such moves.  The block-transposition distance
+$\dist(p)$ is the minimum number of moves required to transform $p$ into
+$\id$, and
+\[
+  \TD(n)=\max_{p\in S_n}\dist(p).
+\]
+
+We use three related layer notations:
+\begin{align*}
+  \E(n,d)&=\{p\in S_n:\dist(p)=d\},\\
+  \D(n)&=\E(n,\TD(n)),\\
+  \T(n,k)&=\{p\in S_n:\dist(p)\geq k\}.
+\end{align*}
+The computation persists exact layers $\E(n,d)$, not merely lower-bound
+candidate sets.
+
+For a symbol $x$ occurring in $p$, let $p-x$ denote the word obtained by
+deleting $x$ and then standardizing the remaining values to
+$\{1,\ldots,n-1\}$.  Every reference to deletion below includes this
+standardization.
+
+For the cycle formulation let $N=n+1$, let
+\[
+  \sigma=(0\ 1\ \cdots\ n),\qquad
+  \beta_p=(0\ p_1\ \cdots\ p_n),
+\]
+and use left composition: $(fg)(x)=f(g(x))$.  Two products appear in the
+implementation:
+\[
+  \omega_p=\sigma\beta_p^{-1},
+  \qquad
+  \gamma_p=\beta_p^{-1}\sigma.
+\]
+They are conjugate, since $\omega_p=\sigma\gamma_p\sigma^{-1}$, and hence
+have the same cycle type.  The canonical key is the image vector of
+$\omega_p$; the lower-bound kernel traverses $\gamma_p$.  Keeping these two
+coordinate conventions distinct prevents an otherwise easy cut-indexing
+error.
+
+\section{Deletion, insertion, and exact layers}
+\label{sec:deletion}
+
+The following inequality is the basis of both the layer extension and the
+new root prepass.  It is Lemma~2.4 of Ara\'ujo et
+al.~\cite{AraujoEtAl2026}.
+
+\begin{lemma}[One-symbol deletion inequality]
+\label{lem:deletion}
+For every $p\in S_n$ and every symbol $x$ of $p$,
+\[
+  \dist(p-x)\leq\dist(p)\leq\dist(p-x)+1.       \tag{3.1}
+\]
+\end{lemma}
+
+The first inequality is restriction monotonicity: deleting a symbol from a
+sorting sequence leaves a valid sequence after empty moves are suppressed.
+The second is the one-symbol insertion bound.  In the usual adjacency proof,
+one preliminary block transposition places the inserted symbol in a
+distance-preserving adjacency, after which a sorting sequence of the deletion
+lifts to the original permutation.  We use Lemma~\ref{lem:deletion} as a
+published combinatorial result rather than as a property of the program.
+
+\begin{corollary}[Deletion interval]
+\label{cor:interval}
+For $p\in S_n$,
+\[
+  \max_x\dist(p-x)\leq\dist(p)
+  \leq 1+\min_x\dist(p-x).                      \tag{3.2}\label{eq:deletion-interval}
+\]
+In particular, the distances of two one-symbol deletions of $p$ differ by at
+most one.
+\end{corollary}
+
+If the deletion distances include both $q$ and $q+1$, the interval in
+\eqref{eq:deletion-interval} collapses and $\dist(p)=q+1$.  If every deletion has distance
+$q$, only $q$ and $q+1$ remain possible, so one exact bounded decision is
+necessary.
+
+\begin{proposition}[Exact-layer recurrence]
+\label{prop:layer-recurrence}
+Every member of $\E(n,d)$ is obtained by inserting the maximum symbol $n$
+into a member of
+\[
+  \E(n-1,d-1)\cup\E(n-1,d).                    \tag{3.3}\label{eq:layer-recurrence}
+\]
+Conversely, an insertion from the right-hand side belongs to $\E(n,d)$
+exactly when its deletion interval and, when necessary, an exhaustive
+$\CanSort$ decision assign it distance $d$.
+\end{proposition}
+
+\begin{proof}
+Delete the maximum symbol from $p\in\E(n,d)$.  By
+Lemma~\ref{lem:deletion}, the deletion has distance $d-1$ or $d$, proving
+coverage.  For the converse, compute all deletion distances.  If the interval
+in Corollary~\ref{cor:interval} is a singleton, it is the exact distance.  In
+the remaining case all deletions have the same distance $q$, and exhaustive
+search decides whether the child is sortable in $q$ moves.  Failure gives
+distance $q+1$ by the upper bound in Lemma~\ref{lem:deletion}.
+\end{proof}
+
+An equivalent threshold formulation is often convenient.
+
+\begin{proposition}[Threshold recurrence]
+\label{prop:threshold}
+The set $\T(n,k)$ can be constructed from maximum insertions into
+$\T(n-1,k-1)$ by applying the following tests to each child $p$:
+\begin{enumerate}[label=(\roman*)]
+  \item reject $p$ if any deletion is outside $\T(n-1,k-1)$;
+  \item accept $p$ if any deletion belongs to $\T(n-1,k)$;
+  \item otherwise every deletion has distance $k-1$, and accept $p$ exactly
+    when exhaustive search proves $\neg\CanSort(p,k-1)$.
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+If a deletion has distance at most $k-2$, Lemma~\ref{lem:deletion} gives
+$\dist(p)\leq k-1$.  If a deletion has distance at least $k$, restriction
+monotonicity gives $\dist(p)\geq k$.  The only unresolved case is the uniform
+distance-$(k-1)$ case, where the insertion bound leaves precisely the two
+possibilities $k-1$ and $k$.
+\end{proof}
+
+This recurrence explains why the complete diametral layer alone is
+insufficient when a diameter remains constant.  For example, generating
+$\D(n)$ may also require the degree-$(n-1)$ layer immediately below
+$\D(n-1)$.  The implementation therefore requests exact layers lazily by
+\eqref{eq:layer-recurrence}; it does not assume that every step increases the diameter.
+This distinction is important at degree 14: the published ordinary count
+$|\D(14)|=5{,}246{,}800{,}005$~\cite[Table~5.2]{Korchmaros2015} already
+precludes treating a full unquotiented output list as a convenient
+intermediate representation.
+
+\subsection{The degree-18 reduction}
+
+Monotonicity and Lemma~\ref{lem:deletion} give
+\[
+  \TD(n-1)\leq\TD(n)\leq\TD(n-1)+1.
+\]
+Since $\TD(17)=10$, the only possible degree-18 upper layer is
+$\E(18,11)$.  If $p$ belongs to that layer, every one-symbol deletion has
+distance 10: it has distance at least 10 by Lemma~\ref{lem:deletion}, and at
+most $\TD(17)=10$.  In particular, deletion of 18 lies in $\D(17)$.
+
+\begin{corollary}[Diameter-only decision]
+\label{cor:diameter-only}
+The complete set of maximum insertions into $\D(17)$ contains every member of
+$\E(18,11)$.  Therefore
+\[
+  \E(18,11)=\varnothing\quad\Longleftrightarrow\quad\TD(18)=10,
+\]
+whereas any member of $\E(18,11)$ proves $\TD(18)=11$.
+\end{corollary}
+
+The computation need not construct $\E(18,10)$ to decide the diameter.
+
+\section{Extended-toric symmetry}
+\label{sec:symmetry}
+
+Toric maps preserve block-transposition distance
+\cite{ErikssonEtAl2001,Korchmaros2014,Korchmaros2015}.  Adjoining the reverse
+map gives a dihedral action of order $2N$ on the fixed-target instances; this
+is the factor identified in the Cayley-graph automorphism theorem of
+Korchmaros and Kov\'acs~\cite{KorchmarosKovacs2017}.
+
+Let $\mathfrak r(x)=-x\pmod N$, and define $g^h=hgh^{-1}$.  With the target
+$\sigma$ fixed, the implementation compares the image vectors
+\[
+  \omega^{\sigma^v}
+  \quad\hbox{and}\quad
+  (\omega^{-1})^{\sigma^{v+1}\mathfrak r},
+  \qquad 0\leq v<N.                             \tag{4.1}\label{eq:dihedral-action}
+\]
+The canonical representative $\canon(p)$ is the lexicographically least
+image vector among these $2N$ transforms.  If $G_n$ denotes this dihedral
+action, a canonical key represents
+\[
+  w(p)=\frac{2N}{|\Stab_{G_n}(\omega_p)|}        \tag{4.2}\label{eq:orbit-weight}
+\]
+ordinary permutations.  The stabilizer correction is essential; simply
+assigning weight $2N$ would give incorrect counts for symmetric instances.
+
+\begin{proposition}[Distance preservation]
+\label{prop:distance-preservation}
+All ordinary permutations represented by one canonical key have the same
+block-transposition distance.
+\end{proposition}
+
+\begin{proof}
+The rotations in \eqref{eq:dihedral-action} are the fixed-target form of the toric maps,
+and the second family composes these maps with reversal.  Both induce
+automorphisms of the block-transposition Cayley graph fixing the identity up
+to the fixed-target coordinate change.  Hence they preserve distance.
+\end{proof}
+
+Canonicalizing a parent and immediately inserting into only that stored word
+is not complete: insertion positions are not invariant under the action.
+The following order of operations is therefore mandatory.
+
+\begin{proposition}[Orbit expansion before insertion]
+\label{prop:orbit-expansion}
+Suppose that one canonical representative of every required parent orbit in
+$S_{n-1}$ is stored.  Expand each representative into all distinct ordinary
+members of its $G_{n-1}$-orbit, insert $n$ in every one of the $n$ positions,
+and retain only canonical children.  Then no $G_n$-orbit of eligible children
+is lost.
+\end{proposition}
+
+\begin{proof}
+Let $q$ be an eligible child, and let $p=q-n$.  The store contains a canonical
+representative $p_0$ in the orbit of $p$.  Full orbit expansion of $p_0$
+therefore emits $p$.  Inserting $n$ at its original position emits $q$, after
+which canonicalization retains the representative of the orbit of $q$.
+\end{proof}
+
+Moreover, each ordinary child has a unique ordinary parent obtained by
+deleting its maximum.  Expanding distinct parent orbits into distinct
+ordinary parents therefore avoids a global ordinary-child deduplication
+table.  Canonical keys and orbit weights supply the compact persisted form.
+
+\section{The exact extension algorithm}
+\label{sec:algorithm}
+
+For a requested exact layer $\E(n,d)$, the dependency planner first ensures
+that $\E(n-1,d-1)$ and $\E(n-1,d)$ are complete whenever those layers are
+within the established diameter bounds.  It then executes
+Algorithm~\ref{alg:extension}.
+
+\begin{algorithm}[Canonical exact-layer extension]
+\label{alg:extension}
+Given complete canonical stores for the required parent layers:
+\begin{enumerate}[label=\arabic*.]
+  \item Stream every canonical parent and recover all its distinct ordinary
+    extended-toric orbit members.
+  \item Insert the new maximum $n$ in all $n$ positions of every member.
+  \item Discard a child unless its fixed-target $\omega$ key is canonical.
+  \item Standardize every one-symbol deletion and query its canonical key in
+    the complete parent stores or resident exact tables.
+  \item Use Corollary~\ref{cor:interval} to determine the child's distance
+    whenever possible.  If all deletion distances are equal to $q$, run the
+    exhaustive decision $\CanSort(p,q)$.
+  \item Persist the canonical child exactly when its distance is the requested
+    $d$; add its orbit weight only to aggregate counts.
+\end{enumerate}
+\end{algorithm}
+
+For the diameter-only degree-18 run, the requested layer is $\E(18,11)$.
+The program stops early on a verified distance-eleven child.  If none exists,
+it must process the complete parent manifest and settle every canonical child
+before it can publish an empty result.
+
+\subsection{Candidate intervals and exact decisions}
+
+Let
+\[
+  m(p)=\min_x\dist(p-x),\qquad
+  M(p)=\max_x\dist(p-x).
+\]
+Corollary~\ref{cor:interval} gives
+\[
+  M(p)\leq\dist(p)\leq m(p)+1.                  \tag{5.1}
+\]
+Since $M(p)-m(p)\leq1$, a mixed pair of deletion distances determines
+$\dist(p)=M(p)$.  Only $m(p)=M(p)=q$ reaches bounded search.  The search is a
+decision procedure, not a heuristic: it enumerates every block transposition
+unless a proved lower bound, exact table lookup, or distance-preserving
+contraction settles the state.
+
+\subsection{Lazy dependency schedule}
+
+Exact stores are horizon-independent.  A request for $\E(n,d)$ recursively
+requests only $\E(n-1,d-1)$ and $\E(n-1,d)$.  This matters in the constant
+diameter steps at degrees 14 and 16, where the layer below the previous
+diametral set is required.  For the degree-18 diameter-only decision,
+$\E(17,11)$ is outside the known upper bound and $\E(17,10)=\D(17)$ is the
+only parent layer at the final step.
+
+\section{Exact bounded search}
+\label{sec:search}
+
+The bounded search receives a root $p\in S_n$ and a budget $r$.  It performs
+iterative depth-first search over all $\binom{n+1}{3}$ cut triples.  The only
+unconditional move suppression is immediate reversal of the previous move,
+which cannot occur in a shortest path.  GPU kernel quanta may suspend and
+resume a search, but a quantum boundary never classifies an unfinished root.
+
+\subsection{Odd-cycle lower bound}
+
+Let $c_{\mathrm{odd}}(p)$ be the number of odd cycles of
+$\gamma_p=\beta_p^{-1}\sigma$.  The Bafna--Pevzner lower bound is
+\[
+  h(p)=\frac{N-c_{\mathrm{odd}}(p)}{2}
+  \leq\dist(p).                                 \tag{6.1}
+\]
+This is precisely the 3-cycle length formula
+$\ell_3(\gamma_p)=(N-c_{\mathrm{odd}}(p))/2$ of M\"uhle and
+Nadeau~\cite[Proposition~3.1]{MuhleNadeau2019}; its role in large-distance
+enumeration is restated by B\'ona and
+Pittel~\cite[Section~4]{BonaPittel2025}.
+
+A block transposition changes $c_{\mathrm{odd}}$ by a value
+\[
+  \Delta\in\{-2,0,2\}.
+\]
+In the applicable-3-cycle representation, M\"uhle and
+Nadeau~\cite[Proposition~3.2 and Corollary~3.3]{MuhleNadeau2019}
+characterize exactly when right multiplication changes $\ell_3$ by
+$-1$, $0$, or $1$, equivalently when it traverses a cover.  Thus an
+applicable move has exactly the three displayed odd-cycle deltas, and a
+$+2$ move traverses a cover toward the identity.
+The production kernel computes this delta using the same constant-time cycle
+routine as the independently audited emitter.  Its cut arguments are formed
+in the $\gamma_p$ convention, rather than copied from the canonical
+$\omega_p$ convention.
+
+\begin{proposition}[Slack-exact move filter]
+\label{prop:slack}
+At a search state with remaining budget $r$, let $s=r-h(p)$.  A child can fit
+within budget only under the following rule:
+\[
+\begin{array}{c|c}
+  s & \text{admissible }\Delta\\ \hline
+  0 & 2\\
+  1 & 0,2\\
+  s\geq2 & -2,0,2.
+\end{array}                                      \tag{6.2}\label{eq:slack-filter}
+\]
+Thus filtering the other moves preserves completeness.
+\end{proposition}
+
+\begin{proof}
+Since the child has
+$h'=h-\Delta/2$ and remaining budget $r-1$, its slack is
+\[
+  s'=(r-1)-h'=s-1+\frac{\Delta}{2}.              \tag{6.3}
+\]
+A necessary condition is $s'\geq0$.  Substitution of the three possible
+values of $\Delta$ gives exactly \eqref{eq:slack-filter}.
+\end{proof}
+
+This rule is a direct consequence of the M\"uhle--Nadeau length formula and
+cover characterization, not an assumption about the structure of optimal
+sorting sequences.
+
+\subsection{Qualifying covers and contraction}
+
+A $+2$ move is called \emph{qualifying} when it creates a fixed point in the
+resulting algebraic permutation.  The fixed point gives an identity adjacency
+in the word coordinates, so the child contracts by one symbol without changing
+distance.  This is the qualifying-move mechanism used in the proof of
+$\TD(16)=9$~\cite[Lemma~7.2]{SilvaEtAl2026}.
+
+\begin{proposition}[Root qualifying-move prepass]
+\label{prop:qualifying-prepass}
+Let $p\in S_n$ have remaining budget $r$.  If an applicable $+2$ move produces
+a child whose new fixed point contracts to $q\in S_{n-1}$, and a complete
+exact lookup proves $\dist(q)\leq r-1$, then $\CanSort(p,r)$.
+Failure to find such a move or lookup is inconclusive.
+\end{proposition}
+
+\begin{proof}
+Contraction preserves the child's distance, and the qualifying move costs one,
+so $\dist(p)\leq1+\dist(q)\leq r$.
+\end{proof}
+
+The resident-table implementation scans all qualifying moves.  The
+persisted-store implementation emits the contracted canonical key for only the
+first qualifying move and queries the complete degree-$(n-1)$ store; a failed
+or inconclusive first lookup leaves the root to exact DFS.  This asymmetry can
+lose an optimization opportunity but cannot change a decision.
+
+\subsection{The \texorpdfstring{$N=19$}{N=19} oriented-unicycle reduction}
+
+Silva et al.~\cite[Proposition~7.4]{SilvaEtAl2026} show for the odd-cycle
+lengths needed in their $N=17$ proof that an oriented odd cycle either admits
+the qualifying criterion or has a support-clearing sequence of length
+$(k+1)/2$, apart from one explicitly handled local exception.  We extended
+their exhaustive route-O classification to $N=19$.
+
+\begin{lemma}[$N=19$ unicycle classification]
+\label{lem:n19-clearing}
+Let $(\omega,\beta)$ be a realizable cyclic-target pair on 19 symbols and
+suppose that $\omega$ is an oriented 19-cycle.  If it evades the qualifying
+criterion of Silva et al., then it has a support-clearing sequence of ten block
+transpositions.
+\end{lemma}
+
+\begin{proof}[Computational verification]
+Normalize $\beta=(0\ 1\ \cdots\ 18)$ and write the cycle uniquely from
+zero.  The exhaustive route-O enumeration visited $9{,}304{,}845$ partial
+nodes and retained three normalized cycles.  Removing the unoriented survivor
+and quotienting by the auxiliary dihedral action leaves two oriented orbit
+representatives:
+\begin{verbatim}
+(0 10 1 11 2 12 3 13 4 14 5 15 6 16 7 17 8 18 9)
+(0 16 13 10 7 4 1 17 14 11 8 5 2 18 15 12 9 6 3)
+\end{verbatim}
+Both representatives pass the cyclic-target realizability test, and the native
+witness search verifies a ten-move support-clearing sequence for each.  The
+enumeration prunes only conditions necessary for failure of the qualifying
+criterion, so these representatives cover every unresolved oriented case.
+\end{proof}
+
+At a degree-18 DFS root, fixed points are contracted before this reduction is
+tested.  Consequently an unresolved odd unicycle is fixed-point-free and its
+nontrivial cycle has length 19, so Lemma~\ref{lem:n19-clearing} supplies the
+ten-move upper bound.  The reduction is enabled only for $n=18$ and budgets at
+least 10; otherwise the exact DFS continues.
+
+\subsection{A generalized deletion prepass}
+
+The deletion inequality is also useful \emph{inside} every bounded search.
+The following statement is independent of the target degree.
+
+\begin{proposition}[Root deletion prepass]
+\label{prop:root-prepass}
+Let $p\in S_n$ and let $r$ be a bounded-search budget.  For any standardized
+one-symbol deletion $q=p-x$:
+\begin{enumerate}[label=(\roman*)]
+  \item an upper bound $\dist(q)\leq r-1$ proves
+    $\CanSort(p,r)$;
+  \item a lower bound $\dist(q)>r$ proves
+    $\neg\CanSort(p,r)$.
+\end{enumerate}
+If neither condition holds for any deletion, the result is inconclusive and
+the complete DFS must continue.
+\end{proposition}
+
+\begin{proof}
+Part (i) follows from the insertion half of
+Lemma~\ref{lem:deletion}:
+$\dist(p)\leq\dist(q)+1\leq r$.  Part (ii) follows from restriction
+monotonicity: $\dist(p)\geq\dist(q)>r$.
+\end{proof}
+
+In the implementation, the prepass is enabled whenever a degree-$(n-1)$
+exact pattern table or completed membership bitmap is resident.  An exact
+entry supplies both bounds.  For a completed top-layer bitmap for
+$\E(n-1,t)$, a set bit means exact distance $t$, while an unset bit means
+distance at most $t-1$; a partial bitmap is never queried.  All $n$
+standardized deletions are checked at DFS depth zero.  The code is
+parameterized by $n$ and contains no branch specific to $n=18$.
+
+The prepass may settle a large fraction of roots when a complete
+$\D(n-1)$ layer is resident, but it does not change the dependency plan: it
+reuses a layer already loaded for extension or contraction.  Its absence or
+an inconclusive answer affects performance only.
+
+\subsection{Distance-preserving contraction and exact tables}
+
+If a word contains an identity adjacency---including the two boundary
+adjacencies---the later symbol can be deleted without changing distance.
+Repeated contraction produces a core permutation.  A resident exact table
+can then settle the core.  A table entry records an exact distance; an absent
+entry below a declared retained floor records only the corresponding upper
+bound.  These semantics are kept separate in the device encoding.
+
+\section{Implementation and persistence}
+\label{sec:implementation}
+
+The reference implementation is in the \code{experiments} module of the
+project repository~\cite{SourceCode}.  Java coordinates persistent storage,
+host queues, and CUDA devices.  CUDA kernels perform orbit expansion,
+maximum insertion, child canonicality, deletion ranking, resident table
+lookups, and exact DFS.  GPU mode never silently falls back to a CPU sorting
+decision.
+
+\subsection{Canonical records}
+
+For a degree-$n$ instance, the key is the canonical image vector of
+$\omega=\sigma\beta^{-1}$.  Every symbol occupies five bits, most significant
+bit first.  With $n=18$, the 19 images occupy 12 bytes.  The value is one byte
+whose low nibble is the exact distance.  Orbit weights are recomputed during
+orbit expansion and are stored only as aggregate manifest counts.
+
+The persistent backend is RocksDB~\cite{RocksDB}.  Each exact layer has its
+own directory and manifest.  A readable manifest records the degree, exact
+distance, encoding version, canonical count, weighted ordinary count, and
+the property \code{complete=true}.  A store without a compatible complete
+manifest is unavailable, never an empty mathematical set.
+
+\subsection{Atomic completion}
+
+Records are written asynchronously, but the completion manifest is published
+only after workers have terminated successfully, the writer queue has drained,
+the database has flushed, and expected counts have been checked when known.
+The diameter result is first written to a temporary file and then atomically
+renamed.  An exception, interruption, incomplete parent traversal, or
+unresolved candidate therefore cannot publish a completed empty result.
+
+For an empty diameter decision, the program verifies three coverage
+equalities:
+\begin{align*}
+  \text{parents processed}
+    &=\text{canonical size in the input manifest},\\
+  \text{ordinary children generated}
+    &=n\sum_d\text{weighted parent count at distance }d,\\
+  \text{canonical candidates}
+    &=\text{deletion-rejected}+
+      \text{directly determined}+
+      \text{exact-search decisions}.            \tag{7.1}\label{eq:coverage}
+\end{align*}
+The second equality incorporates full orbit expansion and all maximum
+insertion positions.
+
+\subsection{GPU caches}
+
+Completed canonical stores may be expanded into one of two device caches.
+A four-bit dense table can hold exact distances for several retained layers;
+a one-bit membership table represents one complete exact layer.  Population
+is checked against the source manifest after orbit expansion.  All ranks,
+offsets, and populations use 64-bit counters.  Device-specific cache
+selection respects reserved search workspaces and a configurable VRAM
+fraction.  Failure to fit a cache causes a slower lookup path, not a change in
+the mathematical search.
+
+\subsection{Parallel work and early termination}
+
+Canonical candidates are aggregated by search budget and distributed over
+independent GPU slots.  Full queues apply backpressure.  A positive
+distance-eleven result cancels the remaining decision work, because one
+witness settles the diameter.  Negative publication, in contrast, requires
+complete traversal and the coverage equalities in \eqref{eq:coverage}.
+
+\section{Correctness of the computational reduction}
+\label{sec:correctness}
+
+\begin{theorem}[Exactness of a completed extension]
+\label{thm:extension-correct}
+Assume that:
+\begin{enumerate}[label=(\alph*)]
+  \item every input exact-layer manifest is complete and correct;
+  \item each stored parent is expanded into its full distinct ordinary
+    extended-toric orbit;
+  \item all maximum insertion positions are generated;
+  \item deletion queries use complete exact stores with the stated absence
+    semantics;
+  \item every unresolved candidate is decided by a complete bounded search;
+  \item every root prepass uses only the proved one-sided conclusions in
+    Propositions~\ref{prop:root-prepass} and
+    \ref{prop:qualifying-prepass}, or the complete classification in
+    Lemma~\ref{lem:n19-clearing};
+  \item output is published only after all coverage equalities hold.
+\end{enumerate}
+Then the published output for a request $(n,d)$ contains exactly one canonical
+representative of every extended-toric orbit in $\E(n,d)$, with correct orbit
+weights.
+\end{theorem}
+
+\begin{proof}
+For completeness, Proposition~\ref{prop:layer-recurrence} places the
+maximum deletion of every $p\in\E(n,d)$ in one of the requested parent
+layers.  Proposition~\ref{prop:orbit-expansion} shows that full orbit
+expansion followed by all insertions generates the orbit of $p$ and retains
+its canonical key.  Corollary~\ref{cor:interval} and exhaustive bounded
+search assign its exact distance, so it is retained.
+
+For soundness, every retained key comes from a valid insertion.  Mixed
+deletion distances determine the exact distance by
+Corollary~\ref{cor:interval}; a uniform deletion distance leaves only two
+possibilities, which complete bounded search distinguishes.  Distance is
+constant on each canonical orbit by
+Proposition~\ref{prop:distance-preservation}.  Orbit--stabilizer gives the
+weight in \eqref{eq:orbit-weight}.  Finally, the maximum deletion is unique for each
+ordinary child, and the coverage checks rule out a truncated traversal.
+\end{proof}
+
+\begin{theorem}[Degree-18 completion certificate]
+\label{thm:certificate}
+Suppose a run requesting $\E(18,11)$ satisfies all hypotheses of
+Theorem~\ref{thm:extension-correct}, reads the archived complete
+$\E(17,10)$ input, finishes without early cancellation, verifies
+\eqref{eq:coverage}, and atomically publishes an empty result.  Then
+$\TD(18)=10$.
+\end{theorem}
+
+\begin{proof}
+Theorem~\ref{thm:extension-correct} makes the published empty set equal to
+$\E(18,11)$.  Corollary~\ref{cor:diameter-only} then gives
+$\TD(18)=10$.
+\end{proof}
+
+If the run instead stops on a child for which exhaustive search proves
+$\neg\CanSort(p,10)$, its maximum deletion has distance 10 and hence
+$\dist(p)\leq11$.  Therefore $\dist(p)=11$, proving the alternative value
+$\TD(18)=11$.
+
+\section{Validation}
+\label{sec:validation}
+
+Small-degree validation tests implementation behavior; it does not replace
+the degree-18 exhaustive run.  The current validation suite contains the
+following independent or cross-implementation checks.
+
+\begin{enumerate}
+  \item Independent breadth-first search reconstructs complete distance
+    histograms and exact sets through degree 9 (and degree 10 in the extended
+    audit), and verifies the deletion inequality on every permutation.
+  \item CPU and GPU fixed-target canonicality and orbit weights are compared
+    on every permutation through degree 9.  The weighted representatives sum
+    to $n!$.
+  \item Complete GPU diametral counts through degree 9 are checked against the
+    independent histograms, including runs whose largest exact table has
+    degree $n-1$.
+  \item The actual emitter cycle-delta functions are compared with explicit
+    cycle recounting for every permutation and every oriented cut triple
+    through degree 8, together with a nontrivial degree-9 merge case.
+  \item The production lower-bound coordinate mapping and
+    Proposition~\ref{prop:slack} are audited for every permutation/cut pair
+    through degree 8.  This is 3,696,986 queries in total.
+  \item Forced one-, two-, and three-tick GPU kernel quanta test resumability,
+    root exhaustion, and both phases of the two-budget protocol.
+  \item Queue overflow is forced and checked to split the input range without
+    losing or double-counting a canonical root.
+  \item Completed device membership and pattern tables are population-checked
+    against persistent manifests after full orbit expansion.
+  \item A persisted-$\D(9)$ integration run reconstructs
+    $|\D(10)|=255{,}053$ and resolves 494 roots through the qualifying-move
+    lookup without changing the exact output.
+  \item The $N=19$ route-O enumeration visits $9{,}304{,}845$ nodes and
+    leaves the two realizable oriented orbits in
+    Lemma~\ref{lem:n19-clearing}; native CUDA witness search and the
+    production prepass independently resolve both in ten moves.
+\end{enumerate}
+
+The production slack audit independently constructs each child word, rebuilds
+its $\gamma$ permutation, recounts cycles, and compares this result with both
+the constant-time delta routine and the feasibility rule in \eqref{eq:slack-filter}.
+This specifically protects the distinction between the $\omega$ and
+$\gamma$ coordinate systems.
+
+\section{Benchmark of the slack and deletion rules}
+\label{sec:benchmark}
+
+We measured four variants of the same CUDA bounded-search kernel: neither
+rule, only Proposition~\ref{prop:slack}, only
+Proposition~\ref{prop:root-prepass}, and both rules.  Each run used 32,768
+evenly spaced permutation ranks, a degree-$(n-1)$ resident exact table, two
+warmups, and the median of eleven measured repetitions on an NVIDIA RTX 4070
+Laptop GPU.  Every variant returned an identical decision array.
+
+\begin{table}[ht]
+\centering
+\caption{Kernel time and speedup relative to the unfiltered bounded DFS.}
+\label{tab:benchmark}
+\begin{tabular}{@{}rrrrrrrrr@{}}
+\toprule
+$n$ & budget & baseline & \multicolumn{2}{c}{slack only}
+ & \multicolumn{2}{c}{deletions only} & \multicolumn{2}{c}{both}\\
+\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(l){8-9}
+ & & ms & ms & speedup & ms & speedup & ms & speedup\\
+\midrule
+8  & 4 &  6.089 &  2.854 & 2.133 &  5.765 & 1.056 &  2.666 & 2.283\\
+9  & 4 &  0.975 &  0.715 & 1.364 &  0.626 & 1.558 &  0.288 & 3.388\\
+10 & 5 & 30.952 & 13.117 & 2.360 & 30.401 & 1.018 & 13.030 & 2.375\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+These are bounded-search microbenchmarks, not projections of the degree-18
+wall time.  Root distributions, cache residency, I/O, orbit expansion, and
+the fraction settled before DFS all change with degree.  The benchmark shows
+that both rules are exact and reusable, and that their interaction can be
+substantial; it does not estimate the time needed to prove
+$\E(18,11)=\varnothing$.
+
+The benchmark is reproducible with
+\begin{verbatim}
+bash experiments/run.sh search-benchmark --benchmark-n 9 \
+  --benchmark-budget 4 --benchmark-jobs 32768 \
+  --benchmark-table-degree 8 --benchmark-repeats 11
+\end{verbatim}
+These two features default to enabled and can be disabled independently with
+the Java properties \code{extension.slackMoveFilter} and
+\code{extension.rootDeletionPrepass}.  The qualifying prepass is controlled by
+\code{extension.rootMovePrepass} (default \code{auto}, with minimum budget 8),
+and the degree-18 clearing reduction by
+\code{extension.oddCyclePrepass}.  They are covered by the exact integration
+tests above rather than folded into this earlier four-way timing table.
+
+\section{Final computation and proof artifacts}
+\label{sec:certificate}
+
+The intended diameter-only invocation builds native CUDA kernels, opens the
+complete dependency stores, and requests the upper layer at degree 18.  A
+representative command is
+\begin{verbatim}
+mvn -pl experiments -am -Pcuda-native -DgpuTests=true verify \
+  dependency:copy-dependencies
+bash experiments/run.sh diameter --no-build --max-n 18 \
+  --cuda-ptx-dir "$PWD/experiments/target/native" \
+  --data-dir experiments/data/extension \
+  --log-file experiments/logs/extension.log
+\end{verbatim}
+Machine-specific GPU lists, slot counts, and VRAM caps may be added without
+changing the searched set.
+
+For publication, the final run should archive more than the small atomic
+result properties file.  At minimum, the archive should contain:
+\begin{enumerate}
+  \item the exact source revision and a clean-worktree patch status;
+  \item compiler, JDK, Maven, CUDA toolkit, driver, JCuda, and RocksDB versions;
+  \item build commands and SHA-256 hashes of all loaded PTX files;
+  \item complete input manifests and hashes for every exact store;
+  \item the full command line, environment settings, hardware inventory, and
+    start/end timestamps;
+  \item an uninterrupted log containing the parent, generated, canonical,
+    rejected, determined, and exact-query totals;
+  \item the atomic \code{td-18.properties} result and its hash;
+  \item output from all CPU and GPU audits at the archived revision;
+  \item preferably, an independent verifier which checks the result without
+    invoking the production search scheduler.
+\end{enumerate}
+
+\begin{table}[ht]
+\centering
+\caption{Fields to replace from the completed degree-18 run.  Pending entries
+must not be filled from a partial run.}
+\label{tab:final-run}
+\begin{tabular}{@{}p{0.34\linewidth}p{0.57\linewidth}@{}}
+\toprule
+Field & Archived value\\
+\midrule
+Source revision & \code{PENDING}\\
+Input $\E(17,10)$ manifest/hash & \code{PENDING}\\
+Hardware and software stack & \code{PENDING}\\
+Canonical parents processed & \code{PENDING}\\
+Ordinary insertions generated & \code{PENDING}\\
+Canonical candidates settled & \code{PENDING}\\
+Bounded-search decisions & \code{PENDING}\\
+Start, end, and wall time & \code{PENDING}\\
+Outcome for $\E(18,11)$ & \code{PENDING}\\
+Result/log archive hashes & \code{PENDING}\\
+Independent verification & \code{PENDING}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Interpreting the two outcomes}
+
+If a match is found, the archive must include its ordinary word and canonical
+$\omega$ key.  An independent bounded search can then verify that it is not
+sortable in ten moves, while a degree-17 deletion supplies the upper bound
+11.  If no match is found, the log and manifests must show that every input
+parent and canonical child was settled and that no early-stop flag was set.
+Only the latter complete negative outcome activates
+Theorem~\ref{thm:certificate}.
+
+\section{Limitations and further certificate work}
+
+The persistent layer stores contain canonical permutations and exact
+distances, but not sorting sequences.  A completed negative search is thus a
+reproducible computational proof based on source, manifests, and audit logs,
+not a compact independently replayable certificate.  For submission, a
+separate checker would materially strengthen the result.  It should have a
+minimal interface to the emitter, independently implement the combinatorial
+case split, and verify either all emitted bounded-search certificates or a
+more compact exhaustive-search transcript.  The emitter/checker separation in
+Silva et al.~\cite{SilvaEtAl2026} provides a useful model.
+
+The current validation degrees are deliberately small enough for independent
+BFS.  Agreement there is strong regression evidence, but it does not prove
+that a degree-18 run completed.  Likewise, benchmark speedups establish only
+performance and decision agreement on the sampled roots.
+
+Finally, the extended-toric quotient is used only at the root/class level.
+The dihedral Cayley-graph automorphisms do not, by themselves, justify
+discarding noncanonical states inside one representative's DFS.  The present
+DFS therefore explores all cut triples subject only to the proved rules in
+Section~\ref{sec:search}.
+
+\section{Conclusion}
+
+The deletion inequality reduces the open degree-18 diameter to the emptiness
+of a single exact layer, $\E(18,11)$.  Extended-toric symmetry makes the root
+set manageable only when every canonical parent is expanded before insertion.
+The resulting candidates are settled by exact deletion intervals and complete
+bounded search.  The same deletion theory yields a generalized degree-$(n-1)$
+root prepass, while the M\"uhle--Nadeau 3-cycle length gives an exact slack
+filter.  Qualifying covers followed by contraction add a one-sided lookup, and
+the exhaustive $N=19$ classification adds the degree-18 oriented-unicycle
+clearing reduction.  Each reduction has a separate audit or exact integration
+test.
+
+Once the complete run and the artifacts in
+Table~\ref{tab:final-run} are available, the final paper can replace its
+status box and conditional target theorem with the resulting unconditional
+diameter statement.
+
+\appendix
+
+\section{Proof-obligation checklist}
+\label{app:checklist}
+
+For convenience, the logical dependencies of the negative result are listed
+in the order in which a verifier can check them.
+\begin{enumerate}
+  \item Establish $\TD(17)=10$ and the one-symbol deletion inequality of
+    Ara\'ujo et al.~\cite{AraujoEtAl2026}.
+  \item Conclude $10\leq\TD(18)\leq11$ and reduce the problem to
+    $\E(18,11)$.
+  \item Verify the complete $\E(17,10)$ input manifest and its weighted orbit
+    count.
+  \item Verify the fixed-target extended-toric action, canonical keys, and
+    stabilizer weights.
+  \item Verify full parent-orbit expansion and all 18 maximum insertions.
+  \item Verify deletion standardization, canonical lookup, and complete-store
+    absence semantics.
+  \item Verify every pruning rule in bounded DFS, including cut-to-$\gamma$
+    mapping, the M\"uhle--Nadeau length and cover rules, contractions, inverse
+    suppression, slack filtering, both root lookup prepasses, and the $N=19$
+    clearing classification.
+  \item Verify that all candidates are settled and all parent/generation
+    coverage equalities hold.
+  \item Verify atomic empty-result publication and absence of cancellation.
+  \item Apply Theorem~\ref{thm:certificate}.
+\end{enumerate}
+
+\section{Repository map}
+
+The principal implementation and documentation entry points are:
+\begin{center}
+\begin{tabular}{@{}p{0.48\textwidth}p{0.46\textwidth}@{}}
+\toprule
+Path & Role\\
+\midrule
+\path{experiments/README.md} & build, run, storage, GPU, and benchmark guide\\
+\path{experiments/docs/TD18_PROOF.md} & concise degree-18 proof checklist\\
+\path{experiments/docs/DIAMETRAL_EXTENSION.md} & deletion recurrence\\
+\path{experiments/docs/SCAN_BASELINE.md} & independent rank-scan baseline\\
+\path{experiments/src/main/java/.../ExtensionRun.java} & extension orchestration\\
+\path{experiments/src/main/java/.../ToricOrbit.java} & fixed-target canonicality\\
+\path{experiments/src/main/resources/cuda/streaming-count.cu} & exact GPU DFS\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

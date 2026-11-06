@@ -27,6 +27,7 @@ experiments/profiles/
 # Operating-system metadata, including Windows alternate-data-stream exports
 .DS_Store
 Thumbs.db
+NUL
 *.Zone.Identifier
 
 # LaTeX build products
@@ -40,6 +41,8 @@ Thumbs.db
 *.synctex.gz
 *.thm
 paper/main.pdf
+experiments/docs/paper/main.pdf
+!experiments/docs/paper/Makefile
 
 # Locally supplied SIAM macro distribution
 paper/siamart251216.cls

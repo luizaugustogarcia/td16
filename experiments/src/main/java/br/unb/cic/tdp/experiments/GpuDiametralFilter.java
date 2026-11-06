@@ -102,12 +102,7 @@ class GpuDiametralFilter implements AutoCloseable {
 
     void auditMoveDeltas() throws Exception {
         String ptx=ExperimentResources.ptx("emitter-delta-audit",architecture,()->{
-        String emitter = ExperimentResources.read("cuda/emitter/sorting_search.cu");
-        int from = emitter.indexOf("    __device__ __forceinline__ int count_even_cycles");
-        int to = emitter.indexOf("    // ─── Pruning logic",from);
-        if (from < 0 || to < 0) throw new IllegalStateException("Cannot locate emitter cycle functions");
-        return "typedef unsigned char uint8_t;\ntypedef unsigned long long uint64_t;\n#define INT_MIN (-2147483647-1)\n"
-            + emitter.substring(from,to) + ExperimentResources.read("cuda/cycle-delta-audit.cu");
+        return ExperimentResources.emitterCycleFunctions()+ExperimentResources.read("cuda/cycle-delta-audit.cu");
         });
         CUmodule auditModule = new CUmodule();
         cuModuleLoadData(auditModule,ptx);

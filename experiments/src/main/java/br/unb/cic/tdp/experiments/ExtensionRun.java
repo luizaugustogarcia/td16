@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /** Demand-driven exact-layer extension. No S_n rank scan after the degree-1 seed. */
 final class ExtensionRun {
     static final class Stats {
-        final AtomicLong parents=new AtomicLong(),generated=new AtomicLong(),canonical=new AtomicLong(),rejected=new AtomicLong(),determined=new AtomicLong();
+        final AtomicLong parents=new AtomicLong(),generated=new AtomicLong(),canonical=new AtomicLong(),rejected=new AtomicLong(),determined=new AtomicLong(),rootMoveResolved=new AtomicLong();
         long cpuQueries,gpuQueries;
         byte[] firstMatch;
     }
@@ -173,8 +173,8 @@ final class ExtensionRun {
                     double seconds=(System.nanoTime()-started)/1e9;long settled=stats.rejected.get()+stats.determined.get()+stats.cpuQueries+stats.gpuQueries;
                     System.out.printf(java.util.Locale.ROOT,"DEGREE_TIMING n=%d seconds=%.3f settled_canonicals=%d canonical_per_minute=%.0f includes=GPU-setup-compute-drain-flush-publish%n",n,seconds,settled,settled*60/seconds);
                 }
-                System.out.printf("EXTENSION_WORK n=%d generated=%d canonical=%d deletion_rejected=%d determined=%d CPU_queries=%d GPU_queries=%d%n",
-                    n,stats.generated.get(),stats.canonical.get(),stats.rejected.get(),stats.determined.get(),stats.cpuQueries,stats.gpuQueries);
+                System.out.printf("EXTENSION_WORK n=%d generated=%d canonical=%d deletion_rejected=%d determined=%d root_move_resolved=%d CPU_queries=%d GPU_queries=%d%n",
+                    n,stats.generated.get(),stats.canonical.get(),stats.rejected.get(),stats.determined.get(),stats.rootMoveResolved.get(),stats.cpuQueries,stats.gpuQueries);
             }finally {
                 logger.shutdownNow();workers.shutdownNow();
                 if(!workers.awaitTermination(10,TimeUnit.SECONDS))throw new IOException("Extension workers did not terminate");

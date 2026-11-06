@@ -71,6 +71,7 @@ public final class WitnessEmitter {
         OddLengthOrientedCycles.search(6 / (float) 5, 11);
         OddLengthOrientedCycles.search(7 / (float) 6, 13);
         OddLengthOrientedCycles.search(9 / (float) 8, 17);
+        OddLengthOrientedCycles.search(10 / (float) 9, 19);
     }
 
     /**

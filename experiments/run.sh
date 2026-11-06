@@ -9,7 +9,7 @@ task_native=false
 task_options=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    audit|gpu-benchmark|gpu-audit|count|diameter|extend|extension-plan|extension-benchmark|verify-store|verify-membership|sample-membership|classify-sample|audit-generation|scan-count) task_mode=$1; shift ;;
+    audit|gpu-benchmark|gpu-audit|search-benchmark|count|diameter|extend|extension-plan|extension-benchmark|verify-store|verify-membership|sample-membership|classify-sample|audit-generation|scan-count) task_mode=$1; shift ;;
     --no-build) task_build=false; shift ;;
     --max-n) task_options+=("-Dcount.maxN=$2" "-Daudit.maxN=$2"); shift 2 ;;
     --cpu-threads) task_options+=("-Dcount.cpuThreads=$2"); shift 2 ;;
@@ -36,6 +36,11 @@ while [[ $# -gt 0 ]]; do
     --gpu-quantum) task_options+=("-Dextension.gpuQuantum=$2"); shift 2 ;;
     --gpu-parent-batch) task_options+=("-Dextension.gpuParentBatch=$2"); shift 2 ;;
     --benchmark-n) task_options+=("-Dbenchmark.n=$2"); shift 2 ;;
+    --benchmark-budget) task_options+=("-Dbenchmark.budget=$2"); shift 2 ;;
+    --benchmark-jobs) task_options+=("-Dbenchmark.jobs=$2"); shift 2 ;;
+    --benchmark-repeats) task_options+=("-Dbenchmark.repeats=$2"); shift 2 ;;
+    --benchmark-table-degree) task_options+=("-Dbenchmark.tableDegree=$2"); shift 2 ;;
+    --benchmark-deletion-distance) task_options+=("-Dbenchmark.deletionDistance=$2"); shift 2 ;;
     --benchmark-skip) task_options+=("-Dbenchmark.skip=$2"); shift 2 ;;
     --benchmark-parents) task_options+=("-Dbenchmark.parents=$2"); shift 2 ;;
     --verify-n) task_options+=("-Dverify.n=$2"); shift 2 ;;
@@ -59,7 +64,16 @@ if [[ "$task_build" == true ]]; then
   if [[ "$task_native" == true ]]; then task_maven_options+=(-Pcuda-native); fi
   mvn -q -pl experiments -am "${task_maven_options[@]}" -DskipTests package dependency:copy-dependencies
 fi
-task_nvrtc_lib=${GPU_NVRTC_LIB:-$task_repo/../new-td/build/gpu/cuda/usr/local/cuda-12.6/targets/x86_64-linux/lib}
-export LD_LIBRARY_PATH="$task_nvrtc_lib:/usr/lib/wsl/lib:${LD_LIBRARY_PATH:-}"
+# CUDA/NVRTC selection belongs to the calling environment. Server launchers
+# may discover and export GPU_NVRTC_LIB, but this generic runner never embeds
+# a toolkit version or silently substitutes a different installation.
+task_library_path=${LD_LIBRARY_PATH:-}
+if [[ -n ${GPU_NVRTC_LIB:-} ]]; then
+  task_library_path="$GPU_NVRTC_LIB${task_library_path:+:$task_library_path}"
+fi
+if [[ -d /usr/lib/wsl/lib ]]; then
+  task_library_path="/usr/lib/wsl/lib${task_library_path:+:$task_library_path}"
+fi
+export LD_LIBRARY_PATH="$task_library_path"
 exec java --enable-native-access=ALL-UNNAMED "${task_options[@]}" -cp "$task_repo/experiments/target/classes:$task_repo/experiments/target/dependency/*" \
   br.unb.cic.tdp.experiments.ExperimentMain "$task_mode"

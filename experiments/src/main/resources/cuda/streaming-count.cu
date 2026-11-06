@@ -2,6 +2,9 @@ typedef unsigned char Byte;
 typedef unsigned long long Word;
 __device__ __constant__ int pattern_offset_bytes=sizeof(Word);
 __device__ __constant__ Word factorial[19]={1ULL,1ULL,2ULL,6ULL,24ULL,120ULL,720ULL,5040ULL,40320ULL,362880ULL,3628800ULL,39916800ULL,479001600ULL,6227020800ULL,87178291200ULL,1307674368000ULL,20922789888000ULL,355687428096000ULL,6402373705728000ULL};
+// Proven diameter upper bounds through the supported horizon.  Degrees 0--17
+// are exact; the final entry is the currently proved TD(18) <= 11 bound.
+__device__ __constant__ int diameter_upper[19]={0,0,1,2,3,3,4,4,5,5,6,6,7,8,8,9,9,10,11};
 __device__ int orbit_weight(const Byte* word,int n) {
     // Fixed target sigma=(0 1 ... n), left products as in ../td.
     // omega(x)=sigma(beta^{-1}(x)); sigma is implicit in these coordinates.
@@ -111,9 +114,57 @@ __device__ int lower_bound(const Byte* p,int n) {
     }
     return (n+1-odd)/2;
 }
+// The exact permutation traversed by lower_bound: beta^{-1} o sigma.
+// This is conjugate to omega_of_word but its move arguments are different.
+__device__ void lower_bound_permutation(const Byte* p,int n,Byte* omega) {
+    Byte pred[19];int previous=0;
+    for(int i=0;i<n;i++){int v=p[i];pred[v]=previous;previous=v;}pred[0]=previous;
+    for(int x=0;x<=n;x++)omega[x]=pred[x==n?0:x+1];
+}
+__device__ void omega_of_word(const Byte* word,int n,Byte* omega) {
+    int previous=0;for(int i=0;i<n;i++){int v=word[i];omega[v]=previous==n?0:previous+1;previous=v;}omega[0]=previous==n?0:previous+1;
+}
+// The route-O reduction used in the TD(16) proof extends through N=19.
+// For a realizable oriented odd unicycle, either the criterion below supplies
+// a qualifying 2-move or the support has a clearing sequence of (k+1)/2
+// block transpositions.  Every DFS word is realizable by construction.
+__device__ int odd_unicycle_clearing_moves(const Byte* word,int n) {
+    int N=n+1;Byte omega[19],cycle[19],position[19];omega_of_word(word,n,omega);
+    position[0]=0;for(int i=0;i<n;i++)position[word[i]]=i+1;
+    unsigned visited=0;int length=0;
+    for(int start=0;start<N;start++) {
+        if(visited&(1U<<start))continue;
+        int x=start,k=0;Byte current[19];
+        do{visited|=1U<<x;current[k++]=x;x=omega[x];}while(x!=start);
+        if(k>1) {
+            if(length!=0)return -1;
+            length=k;for(int i=0;i<k;i++)cycle[i]=current[i];
+        }
+    }
+    if(length<3 || !(length&1))return -1;
+    // CommonOperations.isOriented(beta,cycle): the cycle is unoriented exactly
+    // when its symbols occur in cyclic order in beta^{-1}.
+    int descents=0;
+    for(int i=0;i<length;i++) {
+        int a=position[cycle[i]],b=position[cycle[(i+1)%length]];
+        int inverse_a=a==0?0:N-a,inverse_b=b==0?0:N-b;
+        if(inverse_a>inverse_b)descents++;
+    }
+    if(descents<=1)return -1;
+    // Qualifying criterion: a,C(a),C^m(a) occur in beta order for even m.
+    // Such a root is left to the qualifying-move prepass or the exact DFS.
+    for(int i=0;i<length;i++) {
+        int a=position[cycle[i]],b=position[cycle[(i+1)%length]];
+        int ab=b-a;if(ab<0)ab+=N;
+        for(int exponent=2;exponent<length;exponent+=2) {
+            int c=position[cycle[(i+exponent)%length]],ac=c-a;if(ac<0)ac+=N;
+            if(ab<ac)return -1;
+        }
+    }
+    return (length+1)/2;
+}
 __device__ int core_distance(const Byte* p,int n,const signed char* table,const Word* offsets,int table_degree,
     const unsigned* membership,int membership_degree,int membership_floor) {
-    if(table_degree<0 && membership_degree<0)return -1;
     Byte tmp[18];for(int i=0;i<n;i++)tmp[i]=p[i];
     int m=n;
     while(m>0) {
@@ -126,10 +177,65 @@ __device__ int core_distance(const Byte* p,int n,const signed char* table,const 
         for(int i=0,j=0;i<m;i++)if(i!=omit){int v=tmp[i];tmp[j++]=v-(v>value);}
         m--;
     }
-    if(m>table_degree && m!=membership_degree)return -1;
+    // A contraction preserves distance.  Even without a resident layer, the
+    // proved diameter of the smaller degree is therefore an admissible upper
+    // bound.  Negative values encode upper bounds as -bound-2; -1 remains
+    // the unavailable/inconclusive sentinel.
+    if(m>table_degree && m!=membership_degree)return m<n?-diameter_upper[m]-2:-1;
     Word rank=0;unsigned used=0;
     for(int i=0;i<m;i++){int v=tmp[i];rank=rank*(m-i)+v-1-__popc(used&((1U<<(v-1))-1));used|=1U<<(v-1);}
     return m<=table_degree?pattern_distance(table,offsets,m,rank):membership_distance(membership,rank,membership_floor);
+}
+// Returns 1 when a deletion proves distance <= remaining, 0 when a deletion
+// proves distance > remaining, and -1 when the degree-(n-1) layer is
+// unavailable or all deletion results are inconclusive. Insertion raises
+// transposition distance by at most one.
+__device__ int root_deletion_result(const Byte* p,int n,int remaining,const signed char* table,const Word* offsets,int table_degree,
+    const unsigned* membership,int membership_degree,int membership_floor) {
+    int m=n-1;if(m<0 || m>table_degree && m!=membership_degree)return -1;
+    Byte deletion[18];
+    for(int omitted=0;omitted<n;omitted++) {
+        int value=p[omitted];
+        for(int i=0,j=0;i<n;i++)if(i!=omitted){int v=p[i];deletion[j++]=v-(v>value);}
+        Word rank=0;unsigned used=0;
+        for(int i=0;i<m;i++){int v=deletion[i];rank=rank*(m-i)+v-1-__popc(used&((1U<<(v-1))-1));used|=1U<<(v-1);}
+        int distance=m<=table_degree?pattern_distance(table,offsets,m,rank):membership_distance(membership,rank,membership_floor);
+        if(distance>=0) {
+            if(distance>remaining)return 0;
+            if(distance+1<=remaining)return 1;
+        } else if(-distance-1<=remaining)return 1;
+    }
+    return -1;
+}
+// Scan the Muehle--Nadeau cover moves at a bounded-search root.  A +2 move
+// lowers the odd-cycle bound by one.  If it creates a fixed point of
+// beta^{-1}*sigma, the child has a bond and contracts without changing
+// distance.  A resolved contracted child within remaining-1 proves that the
+// root is sortable within remaining.  No negative conclusion is drawn here:
+// failure to find such a move is deliberately inconclusive.
+__device__ int root_qualifying_move_result(const Byte* p,int n,int remaining,const int* cuts,int cut_count,
+    const Byte* omega,Byte* child,const signed char* table,const Word* offsets,int table_degree,
+    const unsigned* membership,int membership_degree,int membership_floor) {
+    int child_remaining=remaining-1;
+    for(int cut=0;cut<cut_count;cut++) {
+        int code=cuts[cut],a=code&31,b=(code>>5)&31,c=code>>10;
+        int x=p[a]-1,y=p[b]-1,z=c<n?p[c]-1:n;
+        // childOmega[x]=omega[z], childOmega[y]=omega[x],
+        // childOmega[z]=omega[y].  Only these images change, so any fixed
+        // point below is newly created by this move.  Test this cheap
+        // structural condition before tracing cycles for the +2 test.
+        if(omega[z]!=x && omega[x]!=y && omega[y]!=z)continue;
+        if(delta_even_cycles(omega,(uint8_t)x,(uint8_t)y,(uint8_t)z)!=2)continue;
+        int j=0;
+        for(int i=0;i<a;i++)child[j++]=p[i];
+        for(int i=b;i<c;i++)child[j++]=p[i];
+        for(int i=a;i<b;i++)child[j++]=p[i];
+        for(int i=c;i<n;i++)child[j++]=p[i];
+        int distance=core_distance(child,n,table,offsets,table_degree,membership,membership_degree,membership_floor);
+        if(distance>=0) { if(distance<=child_remaining)return 1; }
+        else if(distance<-1 && -distance-2<=child_remaining)return 1;
+    }
+    return -1;
 }
 extern "C" __global__ void filter_count_roots(Word first,int jobs,int n,int capacity,int begin,
     Word* roots,Byte* weights,int* canonical_count,Word* counters) {
@@ -170,11 +276,11 @@ extern "C" __global__ void initialize_count(int jobs,int n,int frames,int stride
 }
 extern "C" __global__ void advance_count(int active_count,int begin,const int* active,int* output,
     int* output_count,int n,int frames,int stride,int low,int high,int quantum,const int* cuts,int cut_count,
-    Byte* stack,short* next,signed char* depth,Byte* stage,const Byte* weights,Byte* results,const signed char* table,const Word* offsets,
+    int filter_slack_moves,int root_deletion_prepass,int root_move_prepass,int odd_cycle_prepass,Byte* stack,short* next,signed char* depth,Byte* stage,const Byte* weights,Byte* results,const signed char* table,const Word* offsets,
     int table_degree,const unsigned* membership,int membership_degree,int membership_floor,Word* counters) {
     int index=begin+blockIdx.x*blockDim.x+threadIdx.x;if(index>=active_count)return;
     int job=active[index],d=depth[job],phase=stage[job],classification=-1;
-    Byte word[18],child[18];int cached=-2;
+    Byte word[18],child[18],omega[19];int cached=-2,omega_depth=-2;bool odd_cycle_resolved=false;
 #ifdef SOA_STACK
     short* iter=next+job;int iter_stride=stride;
 #else
@@ -194,10 +300,38 @@ extern "C" __global__ void advance_count(int active_count,int begin,const int* a
             int exact=core_distance(word,n,table,offsets,table_degree,membership,membership_degree,membership_floor);
             if(exact<-1 && -exact-2<=remaining){classification=phase==0?0:1;break;}
             if(exact>=0){if(exact<=remaining){classification=phase==0?0:1;break;}d--;continue;}
-            iter[d*iter_stride]=0;
+            if(odd_cycle_prepass && d==0) {
+                int clearing=odd_unicycle_clearing_moves(word,n);
+                if(clearing>0 && clearing<=remaining){odd_cycle_resolved=true;classification=phase==0?0:1;break;}
+            }
+            if(root_deletion_prepass && d==0) {
+                int deletion=root_deletion_result(word,n,remaining,table,offsets,table_degree,membership,membership_degree,membership_floor);
+                if(deletion>0){classification=phase==0?0:1;break;}
+                if(deletion==0){d--;continue;}
+            }
+            if(root_move_prepass && d==0) {
+                if(omega_depth!=d){lower_bound_permutation(word,n,omega);omega_depth=d;}
+                int move=root_qualifying_move_result(word,n,remaining,cuts,cut_count,omega,child,table,offsets,table_degree,membership,membership_degree,membership_floor);
+                if(move>0){classification=phase==0?0:1;break;}
+            }
+            // Store the lower-bound slack class in the unused high bits of
+            // the cut iterator. A +2 move consumes no slack, a 0 move one,
+            // and a -2 move two: s' = s - 1 + delta/2.
+            int slack=remaining-lower;
+            iter[d*iter_stride]=(short)(slack<=0?2048:slack==1?1024:0);
         }
-        if(iter[d*iter_stride]>=cut_count){d--;continue;}
-        int code=cuts[iter[d*iter_stride]++],a=code&31,b=(code>>5)&31,c=code>>10;
+        int state=iter[d*iter_stride],cut=state&1023;
+        if(cut>=cut_count){d--;continue;}
+        iter[d*iter_stride]=(short)((state&~1023)|(cut+1));
+        int code=cuts[cut],a=code&31,b=(code>>5)&31,c=code>>10;
+        if(filter_slack_moves && state>=1024) {
+            if(omega_depth!=d){lower_bound_permutation(word,n,omega);omega_depth=d;}
+            // The changed omega arguments are sigma^{-1} of the first
+            // symbols in the two blocks and the suffix (0 at the end).
+            int x=word[a]-1,y=word[b]-1,z=c<n?word[c]-1:n;
+            int delta=delta_even_cycles(omega,(uint8_t)x,(uint8_t)y,(uint8_t)z);
+            if(delta<(state>=2048?2:0))continue;
+        }
         int j=0;
         for(int i=0;i<a;i++)child[j++]=word[i];
         for(int i=b;i<c;i++)child[j++]=word[i];
@@ -209,7 +343,7 @@ extern "C" __global__ void advance_count(int active_count,int begin,const int* a
         d++;iter[d*iter_stride]=-1;
         for(int i=0;i<n;i++){stack[stack_index(job,d,i,n,frames,stride)]=child[i];word[i]=child[i];}cached=d;
     }
-    if(classification>=0){results[job]=(Byte)classification;atomicAdd(counters,1ULL);if(classification>0)atomicAdd(counters+classification,(Word)weights[job]);}
+    if(classification>=0){results[job]=(Byte)classification;atomicAdd(counters,1ULL);if(classification>0)atomicAdd(counters+classification,(Word)weights[job]);if(odd_cycle_resolved)atomicAdd(counters+4,1ULL);}
     // -1 is a valid continuation: root exhaustion may occur on the last
     // quantum tick. Preserve its sign so the next launch finalizes it.
     else{depth[job]=(signed char)d;stage[job]=phase;int slot=atomicAdd(output_count,1);output[slot]=job;}
@@ -220,8 +354,34 @@ __device__ Word rank_word(const Byte* p,int n) {
     for(int i=0;i<n;i++){int v=p[i];rank=rank*(n-i)+v-1-__popc(used&((1U<<(v-1))-1));used|=1U<<(v-1);}
     return rank;
 }
-__device__ void omega_of_word(const Byte* word,int n,Byte* omega) {
-    int previous=0;for(int i=0;i<n;i++){int v=word[i];omega[v]=previous==n?0:previous+1;previous=v;}omega[0]=previous==n?0:previous+1;
+// Exhaustively audits the production cut-to-omega mapping and the slack
+// inequality against an independently constructed child word.
+extern "C" __global__ void audit_slack_move_deltas(Word jobs,int n,const int* cuts,int cut_count,Word* errors) {
+    Word job=(Word)blockIdx.x*blockDim.x+threadIdx.x;if(job>=jobs)return;
+    Word rank=job/cut_count;int code=cuts[job%cut_count],a=code&31,b=(code>>5)&31,c=code>>10;
+    Byte word[18],child[18],omega[19],changed[19],explicit_child[19];decode_rank(rank,n,word);lower_bound_permutation(word,n,omega);
+    int x=word[a]-1,y=word[b]-1,z=c<n?word[c]-1:n;
+    for(int i=0;i<=n;i++)changed[i]=omega[i];
+    changed[x]=omega[z];changed[y]=omega[x];changed[z]=omega[y];
+    int j=0;for(int i=0;i<a;i++)child[j++]=word[i];for(int i=b;i<c;i++)child[j++]=word[i];
+    for(int i=a;i<b;i++)child[j++]=word[i];for(int i=c;i<n;i++)child[j++]=word[i];lower_bound_permutation(child,n,explicit_child);
+    bool mismatch=false;for(int i=0;i<=n;i++)if(changed[i]!=explicit_child[i])mismatch=true;
+    int before=count_even_cycles(omega,n+1),after=count_even_cycles(explicit_child,n+1);
+    int delta=delta_even_cycles(omega,(uint8_t)x,(uint8_t)y,(uint8_t)z);
+    if(delta!=after-before || (delta!=-2&&delta!=0&&delta!=2))mismatch=true;
+    bool production_qualifies=delta==2&&(omega[z]==x||omega[x]==y||omega[y]==z);
+    bool explicit_qualifies=after-before==2&&
+        (explicit_child[x]==x||explicit_child[y]==y||explicit_child[z]==z);
+    bool child_has_bond=child[0]==1||child[n-1]==n;
+    for(int i=1;i<n;i++)if(child[i]==child[i-1]+1)child_has_bond=true;
+    if(production_qualifies!=explicit_qualifies || production_qualifies&&!child_has_bond)mismatch=true;
+    int lower=(n+1-before)/2,child_lower=(n+1-after)/2;
+    for(int slack=0;slack<=2;slack++) {
+        bool kept=slack>=2 || delta>=(slack==0?2:0);
+        bool feasible=child_lower<=lower+slack-1;
+        if(kept!=feasible)mismatch=true;
+    }
+    if(mismatch)atomicAdd(errors,1ULL);
 }
 __device__ void pack_omega(const Byte* omega,int N,Byte* packed) {
     int bytes=(5*N+7)/8;for(int i=0;i<bytes;i++)packed[i]=0;
@@ -244,6 +404,31 @@ __device__ void canonical_omega_key(const Byte* word,int n,Byte* packed) {
         }
     }
     pack_omega(least,N,packed);
+}
+// Produce one persisted-store key per unresolved extension root.  The key is
+// obtained from the first +2 move that creates a bond, followed by one
+// distance-preserving contraction.  Absence from a complete degree-(n-1)
+// upper tail at the root budget proves that the root is sortable at that
+// budget.  Flags: 0=no qualifying move, 1=key emitted, 2=internal mismatch.
+extern "C" __global__ void prepare_root_move_keys(int jobs,int n,int out_bytes,const Byte* rows,
+    const int* cuts,int cut_count,Byte* keys,Byte* flags) {
+    int job=blockIdx.x*blockDim.x+threadIdx.x;if(job>=jobs)return;flags[job]=0;
+    const Byte* row=rows+(Word)job*out_bytes;if((row[8]&0xc0)==0)return;
+    Word rank=0;for(int b=0;b<8;b++)rank|=(Word)row[b]<<(8*b);
+    Byte word[18],child[18],contracted[18],omega[19];decode_rank(rank,n,word);lower_bound_permutation(word,n,omega);
+    for(int cut=0;cut<cut_count;cut++) {
+        int code=cuts[cut],a=code&31,b=(code>>5)&31,c=code>>10;
+        int x=word[a]-1,y=word[b]-1,z=c<n?word[c]-1:n;
+        if(omega[z]!=x && omega[x]!=y && omega[y]!=z)continue;
+        if(delta_even_cycles(omega,(uint8_t)x,(uint8_t)y,(uint8_t)z)!=2)continue;
+        int j=0;for(int i=0;i<a;i++)child[j++]=word[i];for(int i=b;i<c;i++)child[j++]=word[i];
+        for(int i=a;i<b;i++)child[j++]=word[i];for(int i=c;i<n;i++)child[j++]=word[i];
+        int omit=-1;if(child[0]==1)omit=0;else if(child[n-1]==n)omit=n-1;
+        else for(int i=1;i<n;i++)if(child[i]==child[i-1]+1){omit=i;break;}
+        if(omit<0){flags[job]=2;return;}
+        int value=child[omit];for(int i=0,k=0;i<n;i++)if(i!=omit){int v=child[i];contracted[k++]=v-(v>value);}
+        canonical_omega_key(contracted,n-1,keys+(Word)job*((5*n+7)/8));flags[job]=1;return;
+    }
 }
 // Diagnostic only: bounded deterministic sampling from a completed membership set.
 extern "C" __global__ void sample_membership(int jobs,int n,Word seed,const unsigned* bits,Byte* output,int* errors) {

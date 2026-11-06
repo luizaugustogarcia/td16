@@ -78,8 +78,13 @@ class GpuExtensionTest {
         ExtensionRun.run(ExtensionRunTest.config(root,9,false));
         ExtensionConfig config=new ExtensionConfig(root,10,3,9,128,2,64,2,true,0.25);
         RetentionPlan plan=new RetentionPlan(10);Path parents=new LayerCatalog(root).find(9,5);
-        ExtensionRun.Stats stats=ExtensionRun.extend(config,plan,10,parents,new SmallTables(9));
-        assertEquals(10L*114327,stats.generated.get());assertTrue(stats.gpuQueries>0);
+        ExtensionRun.Stats[] measured={null};
+        GpuSettingsTest.configured(Map.of("extension.rootMovePrepass","true"),
+            ()->measured[0]=ExtensionRun.extend(config,plan,10,parents,new SmallTables(9)));
+        ExtensionRun.Stats stats=measured[0];
+        assertEquals(10L*114327,stats.generated.get());
+        assertTrue(stats.rootMoveResolved.get()>0);
+        assertTrue(stats.gpuQueries>0);
         assertEquals(0,stats.cpuQueries,"GPU mode must never fall back to CPU sorting");
         try(CanonicalLayerStore store=new CanonicalLayerStore(CanonicalLayerStore.find(root,10,6))) {
             assertEquals(255053,store.manifest.weighted[6]);assertEquals(6,store.manifest.floor);
@@ -93,6 +98,18 @@ class GpuExtensionTest {
                 byte[] decisions=batch.classifyRanks(ranks,120);
                 for(int i=0;i<120;i++)assertEquals(exact[(int)ranks[i]]<=budget?0:1,decisions[i]);
             }
+        }
+    }
+    @Test void realizableNineteenUnicyclesUseTenMoveClearingSequences() throws Exception {
+        byte[][] words={
+            {7,14,2,9,16,4,11,18,6,13,1,8,15,3,10,17,5,12},
+            {9,18,8,17,7,16,6,15,5,14,4,13,3,12,2,11,1,10}
+        };
+        long[] ranks={SmallTables.rank(words[0],18),SmallTables.rank(words[1],18)};
+        try(GpuStreamingCounter gpu=new GpuStreamingCounter(null,1);
+            GpuStreamingCounter.Batch batch=gpu.new Batch(18,11,11,2,null,false,false,false,true)) {
+            assertArrayEquals(new byte[]{0,0},batch.classifyRanks(ranks,2));
+            assertEquals(2,batch.oddCycleResolved);
         }
     }
     @Test void gpuCanonicalDeletionKeysFeedDiskLookupsWithoutCpuSorting() throws Exception {

@@ -32,4 +32,12 @@ final class ExperimentResources {
             return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
         }
     }
+    static String emitterCycleFunctions() throws IOException {
+        String emitter=read("cuda/emitter/sorting_search.cu");
+        int from=emitter.indexOf("    __device__ __forceinline__ int count_even_cycles");
+        int to=emitter.indexOf("    // ─── Pruning logic",from);
+        if(from<0||to<0)throw new IOException("Cannot locate emitter cycle functions");
+        return "typedef unsigned char uint8_t;\ntypedef unsigned long long uint64_t;\n#define INT_MIN (-2147483647-1)\n"
+            +emitter.substring(from,to);
+    }
 }

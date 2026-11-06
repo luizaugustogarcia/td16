@@ -37,6 +37,20 @@ bash experiments/run.sh diameter --max-n 18 \
 tail -f experiments/logs/extension.log
 ```
 
+For a clean run on the local RTX 4070 Laptop GPU, use the no-argument profile:
+
+```bash
+bash experiments/scripts/servers/local-rtx4070-fresh.sh
+```
+
+This profile obtains CUDA from the active environment, emits PTX for both Ada
+(`compute_89`) and Blackwell (`compute_120`), selects a driver-compatible NVRTC
+library from the environment for the local run, and then deliberately deletes all
+existing `experiments/data/` and `experiments/logs/` contents before starting
+TD(18). It refuses to clean while another experiment JVM is active. Its fixed
+settings are tuned for this machine's 8 GiB GPU, 22 CPU threads and 32 GiB RAM;
+progress is written to `experiments/logs/extension.log`.
+
 For the NOVA University Lisbon server specified in
 `Concurso-GPU-16_2026_DL60_DII.pdf` (pages 2, 4 and 7), run the
 [NOVA H200 launcher](scripts/servers/nova-h200.sh) with no arguments:
@@ -78,7 +92,10 @@ search is never published as a complete exact set. The result is recorded in
 Complete canonical parent/support sets through degree 17 remain inputs to this
 extension algorithm. Their counts are incidental to the final diameter goal.
 The proof obligations and certificate limits are described in
-[TD18_PROOF.md](docs/TD18_PROOF.md).
+[TD18_PROOF.md](docs/TD18_PROOF.md). The submission-oriented LaTeX draft is
+in [docs/paper/main.tex](docs/paper/main.tex), with its bibliography and build
+instructions in the same directory. It deliberately remains conditional until
+the complete distance-11 run and verification artifacts are archived.
 
 `count` enumerates diametral sizes, including the distance-10 degree-18 set if
 distance 11 is empty. `extend` is an alias of `count`. The old independent enumerator remains available
@@ -187,6 +204,78 @@ is shared through the `gpu-common` Maven module. Requests are collected
 by search budget into larger batches. A full queue applies backpressure;
 GPU mode never falls back to CPU sorting. Every transposition remains
 available, including `-2`, `0`, and `2` changes in odd-length-cycle count.
+
+The bounded DFS uses four proved reductions. At a state with
+lower-bound slack `s`, it admits only `+2` moves for `s=0`, `+2/0` moves for
+`s=1`, and every move for `s>=2`. The move delta is computed before building
+the child with the emitter's audited cycle-delta routine. At each root it also
+queries every standardized one-symbol deletion when a degree-`n-1` pattern
+table or completed membership bitmap is resident. A deletion sortable within
+`r-1` proves the root sortable within `r`; an exact deletion above `r` rejects
+the root.
+
+A second root prepass scans qualifying `+2` moves that create a fixed point,
+contracts the resulting bond without changing distance, and queries the
+degree-`n-1` exact data. The resident in-kernel path scans all qualifying moves.
+The RocksDB path emits only the first qualifying contracted key; if that lookup
+is inconclusive, complete DFS still settles the root. The default
+`-Dextension.rootMovePrepass=auto` enables this at budgets at least 8; `true` or
+`false` forces it, and `-Dextension.rootMoveMinBudget=...` changes the automatic
+threshold.
+
+Finally, the TD(16) oriented-odd-cycle reduction has been extended through
+`N=19`. After fixed-point contractions, a degree-18 oriented odd unicycle that
+evades the qualifying criterion is one of two realizable oriented orbit
+representatives, and both have verified ten-move support-clearing sequences.
+The exhaustive normalized-cycle search visited 9,304,845 nodes, retained three
+cycles, and left two oriented orbits. This reduction is restricted to `n=18`
+and budget at least 10 and is controlled by
+`-Dextension.oddCyclePrepass=false`. The kernel reports resolutions as
+`oddCycleResolved`; qualifying lookups are included in `root_move_resolved`.
+
+The reproducible four-way A/B benchmark verifies identical decisions for the
+baseline, each optimization alone and both together:
+
+```bash
+bash experiments/run.sh search-benchmark --benchmark-n 9 \
+  --benchmark-budget 4 --benchmark-jobs 32768 \
+  --benchmark-table-degree 8 --benchmark-repeats 9
+```
+
+On an RTX 4070 Laptop GPU, using 32,768 evenly spaced ranks, two warmups and
+the median of eleven runs, the native CUDA kernel produced the following
+results. The table degree is `n-1`; all four variants returned identical
+decision arrays.
+
+| `n` | budget | baseline kernel ms | slack only | deletions only | both | both speedup |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 8 | 4 | 6.089 | 2.854 | 5.765 | 2.666 | 2.283x |
+| 9 | 4 | 0.975 | 0.715 | 0.626 | 0.288 | 3.388x |
+| 10 | 5 | 30.952 | 13.117 | 30.401 | 13.030 | 2.375x |
+
+These are bounded-search microbenchmarks, not a projected TD(18) wall time.
+The degree-18 benefit depends on the actual surviving roots and on which
+degree-17 completed membership layer fits in VRAM.
+
+The odd-cycle quantity is the 3-cycle length
+`ell_3(omega)=(N-c_odd(omega))/2` of Mühle and Nadeau's
+[*A Poset Structure on the Alternating Group Generated by 3-Cycles*](https://doi.org/10.5802/alco.83);
+their cover characterization gives the three move deltas. Bóna and Pittel's
+[*Permutations with restricted cycle lengths*](https://doi.org/10.5802/alco.449),
+Section 4, restates the resulting lower bound. The slack rule is the direct
+one-move consequence `s' = s - 1 + delta/2`; neither paper states this
+implementation rule.
+The extended-toric/dihedral quotient follows Korchmaros's
+[thesis](https://arxiv.org/abs/1504.02157) and the Cayley-graph automorphism
+result of [Korchmaros and Kovács](https://arxiv.org/abs/1511.07268). The
+deletion prepass uses Lemma 2.4 of João Araújo, Wolfram Bentz, Peter J. Cameron,
+and Luiz Silva, *Minimal Excluded Permutations in a Model of Genome Evolution*
+(unpublished manuscript, 14 October 2026), as derived in
+[DIAMETRAL_EXTENSION.md](docs/DIAMETRAL_EXTENSION.md). The qualifying and
+support-clearing reductions extend the route-O analysis of
+[Silva et al.](https://arxiv.org/abs/2609.17493). These symmetry results
+justify the existing root quotient; they do not by themselves prune moves
+inside one representative's DFS.
 
 ### Multiple GPUs and memory budgets
 
@@ -455,10 +544,12 @@ parallel useful work; they do not guarantee 100% utilization of both processors
 at every instant. Current configuration and log locations are in
 [OPERATIONS.md](docs/OPERATIONS.md).
 
-GPU modes require a CUDA driver and the CUDA 12.6 NVRTC libraries, but not
-`nvcc`. Set `GPU_NVRTC_LIB` to the directory containing `libnvrtc.so.12` if
-needed. This workspace reuses the existing runtime under
-`../new-td/build/gpu/cuda/`; that project is not modified.
+GPU modes require a CUDA driver and a driver-compatible NVRTC installation
+exposing `libnvrtc.so.12`, but not `nvcc`. Set `GPU_NVRTC_LIB` to that library
+directory when the system linker does not already expose it. Server launchers
+derive the installed toolkit and NVRTC versions from the selected environment;
+they do not encode a CUDA release. This workspace may reuse the existing
+runtime under `../new-td/build/gpu/cuda/`; that project is not modified.
 
 ## Verification
 
@@ -479,7 +570,11 @@ checks every diametral count (including 255,053 at degree 10 and 12,537,954 at
 degree 11), independent BFS membership through degree 9, and reconstructed
 orbit-weighted counts for every degree-10/11 result and support set. A separate
 `D(9)->D(10)` test exercises the diameter jump: 1,143,270 generated candidates
-recover 255,053 diametral permutations.
+recover 255,053 diametral permutations; with the qualifying prepass forced,
+494 roots are resolved by the persisted-store lookup. The `N=19` tests verify
+the complete survivor/orbit classification, realizability of both oriented
+representatives, their ten-move native clearing witnesses, and resolution by
+the production clearing prepass.
 The configured GPU library path is needed for these tests:
 
 ```bash

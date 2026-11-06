@@ -211,7 +211,10 @@ final class ExtensionResolver implements AutoCloseable {
                         var iterator=batches.entrySet().iterator();GpuStreamingCounter.Batch expired=iterator.next().getValue();iterator.remove();allocated-=expired.allocatedBytes;expired.close();
                         device.workspaceEvictions.incrementAndGet();
                     }
-                    active=gpu.new Batch(degree,q+1,q+1,capacity,stream);
+                    // Extension generation has already checked every root
+                    // deletion at this same budget; repeating the direct
+                    // deletion prepass inside DFS is necessarily inconclusive.
+                    active=gpu.new Batch(degree,q+1,q+1,capacity,stream,gpu.slackMoveFilter,false,gpu.rootMovePrepass(q));
                     try{active.ensureStates(capacity);}catch(Throwable error){active.close();throw error;}
                     batches.put(q,active);allocated+=active.allocatedBytes;
                     if(allocated>device.slotBudget)throw new IllegalStateException("GPU slot exceeded its workspace budget");
