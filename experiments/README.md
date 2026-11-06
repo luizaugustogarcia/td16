@@ -51,6 +51,16 @@ TD(18). It refuses to clean while another experiment JVM is active. Its fixed
 settings are tuned for this machine's 8 GiB GPU, 22 CPU threads and 32 GiB RAM;
 progress is written to `experiments/logs/extension.log`.
 
+When a complete parent layer no longer fits as an exact resident GPU table,
+the extension stage builds a negative-only GPU Bloom filter from its canonical
+keys. Definite misses are rejected in the generation kernel; possible matches
+are still confirmed against RocksDB, so Bloom false positives affect only
+speed. Sparse exact-search roots are accumulated into useful GPU batches rather
+than launched after every short host-queue timeout; a final underfilled batch
+is sharded across the available streams so it can occupy multiple SMs. The
+local profile uses a 65,536-step search quantum, selected on the RTX 4070 from
+deterministic million-parent measurements.
+
 For the NOVA University Lisbon server specified in
 `Concurso-GPU-16_2026_DL60_DII.pdf` (pages 2, 4 and 7), run the
 [NOVA H200 launcher](scripts/servers/nova-h200.sh) with no arguments:

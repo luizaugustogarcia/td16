@@ -188,7 +188,7 @@ bash "$task_repo/experiments/run.sh" diameter --no-build \
   --rocks-memtable-mib 256 --rocks-sst-mib 256 --rocks-cache-mib 512 \
   --gpu-devices 0 --gpu-slots 4 --gpu-slot-mib 0 --vram-fraction 0.90 \
   --gpu-batch-records 262144 --gpu-queue 32 --gpu-parent-batch 4096 \
-  --gpu-quantum 4096 \
+  --gpu-quantum 65536 \
   --log-file "$task_log" &
 task_search_pid=$!
 printf '%s\n' "$task_search_pid" > "$task_log_root/extension.pid"

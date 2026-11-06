@@ -686,6 +686,16 @@ selection respects reserved search workspaces and a configurable VRAM
 fraction.  Failure to fit a cache causes a slower lookup path, not a change in
 the mathematical search.
 
+When neither exact representation fits, the implementation may instead load
+the union of the required complete canonical parent layers into a GPU Bloom
+filter.  The filter is used only in the negative direction: a definite miss
+rejects a child during deletion checking, whereas every possible match is
+confirmed by an exact lookup in RocksDB.  False positives therefore add I/O
+but cannot alter a distance decision.  The loader checks the number of source
+records against the manifests and re-queries every loaded key before enabling
+the filter, thereby auditing the absence of false negatives in the constructed
+device image.
+
 \subsection{Parallel work and early termination}
 
 Canonical candidates are aggregated by search budget and distributed over
@@ -693,6 +703,13 @@ independent GPU slots.  Full queues apply backpressure.  A positive
 distance-eleven result cancels the remaining decision work, because one
 witness settles the diameter.  Negative publication, in contrast, requires
 complete traversal and the coverage equalities in \eqref{eq:coverage}.
+Sparse unresolved roots are retained until either a useful device batch is
+available or the extension input is exhausted.  A final underfilled batch is
+partitioned among the available streams, allowing its independent serial DFS
+roots to occupy multiple multiprocessors.  Kernel quanta bound the time between
+cancellation checks; their size, final partitioning, and the minimum batch
+threshold are performance parameters and do not affect which DFS states are
+visited.
 
 \section{Correctness of the computational reduction}
 \label{sec:correctness}

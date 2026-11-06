@@ -130,7 +130,9 @@ final class ExtensionResolver implements AutoCloseable {
                 long cacheReserve=GpuCandidateGenerator.deviceBytes(degree,parentBatch,false)+workspaceReserve+(256L<<20);
                 GpuCacheBudget cacheBudget=new GpuCacheBudget(cacheReserve,vramFraction);
                 long membershipReserve=gpu.membershipReserve(dataDirectory,degree-1,degree,cacheBudget);
-                GpuCacheBudget patternBudget=cacheBudget.reserve(membershipReserve);
+                int parentDegree=degree-1,parentFloor=Math.max(0,floor-1),parentCeiling=Math.min(floor,RetentionPlan.upper(parentDegree));
+                long canonicalBloomReserve=gpu.canonicalBloomReserve(dataDirectory,parentDegree,parentFloor,parentCeiling,cacheBudget.reserve(membershipReserve));
+                GpuCacheBudget patternBudget=cacheBudget.reserve(Math.addExact(membershipReserve,canonicalBloomReserve));
                 List<Device> sources=opened.subList(0,opened.size()-1).stream().sorted(Comparator.comparingInt((Device d)->d.gpu.tableDegree).reversed()).toList();
                 for(Device source:sources)if(gpu.copyPatternTablesFrom(source.gpu,patternBudget))break;
                 // A larger GPU may grow beyond a cache copied from a smaller GPU.
@@ -143,12 +145,14 @@ final class ExtensionResolver implements AutoCloseable {
                 // A completed higher layer also accelerates a later support layer
                 // at the same degree (notably E(14,7) after D(14)).
                 gpu.loadMembershipTable(dataDirectory,degree,cacheBudget);
+                if(gpu.parentLookupKind(parentDegree,parentFloor)==0&&canonicalBloomReserve>0)
+                    gpu.loadCanonicalBloom(dataDirectory,parentDegree,parentFloor,parentCeiling,cacheBudget);
                 gpu.activate();long[] free={0},total={0};cuMemGetInfo(free,total);
                 boolean dense=gpu.parentLookupKind(degree-1,Math.max(0,floor-1))!=0;
                 long generationBytes=GpuCandidateGenerator.deviceBytes(degree,parentBatch,dense);
                 device.slotBudget=settings.slotBudget(free[0],generationBytes,vramFraction);
                 GpuStreamingCounter.capacityForBudget(degree,RetentionPlan.upper(degree)+1,1,device.slotBudget);
-                System.out.printf("GPU_DEVICE ordinal=%d name=%s slots=%d slot_budget_bytes=%d generation_reserved_bytes=%d pattern_degree=%d pattern_bytes=%d membership_degree=%d membership_bytes=%d cache_workspace_reserved_bytes=%d%n",ordinal,gpu.context.deviceName,settings.layout().slotsPerDevice(),device.slotBudget,generationBytes,gpu.tableDegree,gpu.tableBytes,gpu.membershipDegree(),gpu.membership==null?0:gpu.membership.bytes,cacheReserve);
+                System.out.printf("GPU_DEVICE ordinal=%d name=%s slots=%d slot_budget_bytes=%d generation_reserved_bytes=%d pattern_degree=%d pattern_bytes=%d membership_degree=%d membership_bytes=%d canonical_bloom_bytes=%d cache_workspace_reserved_bytes=%d%n",ordinal,gpu.context.deviceName,settings.layout().slotsPerDevice(),device.slotBudget,generationBytes,gpu.tableDegree,gpu.tableBytes,gpu.membershipDegree(),gpu.membership==null?0:gpu.membership.bytes,gpu.canonicalBloom==null?0:gpu.canonicalBloom.bytes,cacheReserve);
             }
             devices=List.copyOf(opened);int slotCount=settings.layout().totalSlots();
             slots=Executors.newFixedThreadPool(slotCount,Thread.ofPlatform().name("extension-gpu-slot-",0).factory());
@@ -159,13 +163,18 @@ final class ExtensionResolver implements AutoCloseable {
                 int ordinal=settings.layout().deviceForSlot(s);Device device=opened.stream().filter(d->d.ordinal==ordinal).findFirst().orElseThrow();
                 workers[s]=slots.submit(()->runSlot(device,jobs,slot));
             }
-            System.out.printf("GPU_SLOTS n=%d devices=%s slots_per_device=%d total_slots=%d target_batch=%d CPU_sorting=false quantum=%d%n",degree,Arrays.toString(settings.layout().devices()),settings.layout().slotsPerDevice(),slotCount,batchRecords,quantum);
+            int minimumBatch=Integer.getInteger("extension.gpuMinBatchRecords",Math.min(4096,batchRecords));
+            if(minimumBatch<1||minimumBatch>batchRecords)throw new IllegalArgumentException("extension.gpuMinBatchRecords must be 1..gpuBatchRecords");
+            System.out.printf("GPU_SLOTS n=%d devices=%s slots_per_device=%d total_slots=%d target_batch=%d minimum_batch=%d CPU_sorting=false quantum=%d%n",degree,Arrays.toString(settings.layout().devices()),settings.layout().slotsPerDevice(),slotCount,batchRecords,minimumBatch,quantum);
             ready.complete(null);Assembly[] groups=new Assembly[12];
             while(true) {
                 check();Request request=pending.poll(20,TimeUnit.MILLISECONDS);
                 if(request==FINISH)break;
                 if(writer.hasMatch()){for(Assembly group:groups)if(group!=null)group.count=0;continue;}
-                if(request==null){for(Assembly group:groups)if(group!=null&&group.count>0)put(jobs,group.drain());continue;}
+                // Sparse hard roots are extraordinarily inefficient as tiny
+                // CUDA waves. Retain them until a useful batch forms; FINISH
+                // below still drains every residual root exactly.
+                if(request==null){for(Assembly group:groups)if(group!=null&&group.count>=minimumBatch)put(jobs,group.drain());continue;}
                 Assembly group=groups[request.budget];if(group==null)groups[request.budget]=group=new Assembly(request.budget);
                 for(int first=0;first<request.count;) {
                     int take=Math.min(batchRecords-group.count,request.count-first),offset=group.count;
@@ -175,7 +184,20 @@ final class ExtensionResolver implements AutoCloseable {
                     if(group.count==batchRecords)put(jobs,group.drain());
                 }
             }
-            if(!writer.hasMatch())for(Assembly group:groups)if(group!=null&&group.count>0)put(jobs,group.drain());
+            if(!writer.hasMatch())for(Assembly group:groups)if(group!=null&&group.count>0) {
+                // A final batch smaller than one CUDA block would otherwise
+                // execute on a single SM. Shard it across the existing slot
+                // streams so independent serial DFS roots occupy more SMs.
+                int shards=Math.min(slotCount,group.count),total=group.count;
+                for(int shard=0;shard<shards;shard++) {
+                    int first=total*shard/shards,end=total*(shard+1)/shards,count=end-first;
+                    put(jobs,new Request(group.budget,count,
+                        Arrays.copyOfRange(group.ranks,first,end),
+                        Arrays.copyOfRange(group.omegas,first*payloadBytes,end*payloadBytes),
+                        Arrays.copyOfRange(group.weights,first,end)));
+                }
+                group.count=0;
+            }
             for(int s=0;s<slotCount;s++)put(jobs,FINISH);
             for(Future<?> task:workers)task.get();check();
         }catch(Throwable error){failure.compareAndSet(null,error);}

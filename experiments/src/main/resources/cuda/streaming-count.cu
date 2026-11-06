@@ -405,6 +405,28 @@ __device__ void canonical_omega_key(const Byte* word,int n,Byte* packed) {
     }
     pack_omega(least,N,packed);
 }
+__device__ Word canonical_bloom_hash(const Byte* key,int bytes,Word seed) {
+    Word hash=1469598103934665603ULL^seed;
+    for(int i=0;i<bytes;i++){hash^=key[i];hash*=1099511628211ULL;}
+    hash^=hash>>33;hash*=0xff51afd7ed558ccdULL;hash^=hash>>33;hash*=0xc4ceb9fe1a85ec53ULL;return hash^(hash>>33);
+}
+__device__ void canonical_bloom_add(unsigned* bits,Word mask,const Byte* key,int bytes) {
+    Word first=canonical_bloom_hash(key,bytes,0x9e3779b97f4a7c15ULL);
+    Word step=canonical_bloom_hash(key,bytes,0xd1b54a32d192ed03ULL)|1ULL;
+    for(int i=0;i<7;i++){Word bit=(first+i*step)&mask;atomicOr(bits+(bit>>5),1U<<(bit&31));}
+}
+__device__ bool canonical_bloom_might_contain(const unsigned* bits,Word mask,const Byte* key,int bytes) {
+    Word first=canonical_bloom_hash(key,bytes,0x9e3779b97f4a7c15ULL);
+    Word step=canonical_bloom_hash(key,bytes,0xd1b54a32d192ed03ULL)|1ULL;
+    for(int i=0;i<7;i++){Word bit=(first+i*step)&mask;if(!(bits[bit>>5]&(1U<<(bit&31))))return false;}
+    return true;
+}
+extern "C" __global__ void populate_canonical_bloom(int records,int row_bytes,int key_bytes,const Byte* rows,unsigned* bits,Word mask) {
+    int job=blockIdx.x*blockDim.x+threadIdx.x;if(job<records)canonical_bloom_add(bits,mask,rows+(Word)job*row_bytes+1,key_bytes);
+}
+extern "C" __global__ void audit_canonical_bloom(int records,int row_bytes,int key_bytes,const Byte* rows,const unsigned* bits,Word mask,Word* errors) {
+    int job=blockIdx.x*blockDim.x+threadIdx.x;if(job<records&&!canonical_bloom_might_contain(bits,mask,rows+(Word)job*row_bytes+1,key_bytes))atomicAdd(errors,1ULL);
+}
 // Produce one persisted-store key per unresolved extension root.  The key is
 // obtained from the first +2 move that creates a bond, followed by one
 // distance-preserving contraction.  Absence from a complete degree-(n-1)
@@ -463,7 +485,8 @@ extern "C" __global__ void prepare_parent_members(int parents,int n,int row_byte
     if(action<2*N){for(int i=0;i<action;i++)if(ranks[i]==rank){rank=~0ULL;break;}members[parent*2*N+action]=rank;if(rank!=~0ULL)atomicAdd(counts+4,n+1);}
 }
 extern "C" __global__ void generate_extensions(int parents,int n,int floor,int upper,int parent_floor,int row_bytes,const Byte* rows,const Word* members,
-    int dense_parent,const signed char* table,const Word* offsets,const unsigned* membership,int membership_floor,Byte* output,Byte* deletion_keys,int* counts) {
+    int dense_parent,const signed char* table,const Word* offsets,const unsigned* membership,int membership_floor,
+    const unsigned* parent_bloom,Word parent_bloom_mask,Byte* output,Byte* deletion_keys,int* counts) {
     int job=blockIdx.x*blockDim.x+threadIdx.x,total=parents*2*n*n;if(job>=total)return;
     int member_index=job/n,position=job%n,parent=member_index/(2*n);Word member_rank=members[member_index];if(member_rank==~0ULL)return;
     Byte member[18],word[18],deletion[18],omega[19];decode_rank(member_rank,n-1,member);
@@ -478,6 +501,15 @@ extern "C" __global__ void generate_extensions(int parents,int n,int floor,int u
         if(d<parent_floor){if(parent_floor==0&&d<0)atomicAdd(counts+5,1);atomicAdd(counts+2,1);return;}
         if(d<minimum)minimum=d;if(d>maximum)maximum=d;hi=minimum+1;if(hi>upper)hi=upper;
     }
+    if(!dense_parent&&parent_bloom_mask) {
+        int key_bytes=(5*n+7)/8;Byte key[12];
+        for(int omitted=0;omitted<n;omitted++) {
+            if(omitted==position)continue;int value=word[omitted];
+            for(int i=0,j=0;i<n;i++)if(i!=omitted){int v=word[i];deletion[j++]=v-(v>value);}
+            canonical_omega_key(deletion,n-1,key);
+            if(!canonical_bloom_might_contain(parent_bloom,parent_bloom_mask,key,key_bytes)){atomicAdd(counts+2,1);return;}
+        }
+    }
     if(maximum>hi){atomicAdd(counts+5,1);return;}if(hi<floor)return;
     int slot=atomicAdd(counts,1),payload=(5*(n+1)+7)/8,out_bytes=payload+10;
     Byte* out=output+(Word)slot*out_bytes;
@@ -487,8 +519,13 @@ extern "C" __global__ void generate_extensions(int parents,int n,int floor,int u
     else if(!dense_parent) {
         int key_bytes=(5*n+7)/8;
         for(int omitted=0;omitted<n;omitted++) {
+            Byte* key=deletion_keys+((Word)slot*n+omitted)*key_bytes;
+            // Removing the newly inserted maximum recovers the generating
+            // parent, whose exact distance q is already carried in metadata.
+            // Mark that key so the host never performs a redundant lookup.
+            if(omitted==position){for(int b=0;b<key_bytes;b++)key[b]=0xff;continue;}
             int value=word[omitted];for(int i=0,j=0;i<n;i++)if(i!=omitted){int v=word[i];deletion[j++]=v-(v>value);}
-            canonical_omega_key(deletion,n-1,deletion_keys+((Word)slot*n+omitted)*key_bytes);
+            canonical_omega_key(deletion,n-1,key);
         }
     }
 }

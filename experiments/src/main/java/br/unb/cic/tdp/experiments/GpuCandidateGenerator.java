@@ -14,7 +14,7 @@ final class GpuCandidateGenerator implements AutoCloseable {
     final ExtensionResolver resolver;
     final CanonicalLayerStore parents;
     final int n,floor,parentFloor,capacity,rawCapacity,payloadBytes,outBytes;
-    final boolean dense,rootMoveStorePrepass;
+    final boolean dense,canonicalBloom,rootMoveStorePrepass;
     final int lookupKind;
     final CUstream stream=new CUstream();
     final CUfunction prepare=new CUfunction(),generate=new CUfunction(),prepareRootMoves=new CUfunction();
@@ -34,6 +34,7 @@ final class GpuCandidateGenerator implements AutoCloseable {
         payloadBytes=PackedPermutation5.bytes(n+1);outBytes=payloadBytes+10;rawCapacity=Math.multiplyExact(capacity,2*n*n);
         this.gpu=resolver.retainDevice(deviceIndex);
         lookupKind=gpu.parentLookupKind(n-1,parentFloor);dense=lookupKind!=0;
+        canonicalBloom=!dense&&gpu.canonicalBloomCovers(n-1,parentFloor,parents.manifest.maxDistance);
         rootMoveStorePrepass=gpu.rootMovePrepass(parentFloor)&&parents.manifest.floor<=parentFloor&&parents.manifest.maxDistance==RetentionPlan.upper(n-1);
         try {
             cuCtxSetCurrent(gpu.context.context);cuStreamCreate(stream,CUstream_flags.CU_STREAM_NON_BLOCKING);streamReady=true;
@@ -49,7 +50,7 @@ final class GpuCandidateGenerator implements AutoCloseable {
             pin(hostRows,(long)capacity*parents.rowBytes);pin(hostOutput,(long)rawCapacity*outBytes);pin(hostCounts,24);
             if(!dense)pin(hostKeys,(long)rawCapacity*n*parents.payloadBytes);
             if(rootMoveStorePrepass){pin(hostRootMoveKeys,(long)rawCapacity*parents.payloadBytes);pin(hostRootMoveFlags,rawCapacity);}
-            System.out.printf("GPU_GENERATOR device=%d n=%d parent_batch=%d orbit_expansion=GPU canonicality=GPU deletion_canonicality=GPU lookups=%s root_move_store_prepass=%s%n",gpu.context.deviceOrdinal,n,capacity,lookupKind==2?"GPU-membership-bitmap":dense?"GPU-resident-exact-table":"RocksDB-batched-IO",rootMoveStorePrepass);
+            System.out.printf("GPU_GENERATOR device=%d n=%d parent_batch=%d orbit_expansion=GPU canonicality=GPU deletion_canonicality=GPU lookups=%s root_move_store_prepass=%s%n",gpu.context.deviceOrdinal,n,capacity,lookupKind==2?"GPU-membership-bitmap":dense?"GPU-resident-exact-table":canonicalBloom?"GPU-Bloom-negative+RocksDB-positive":"RocksDB-batched-IO",rootMoveStorePrepass);
         }catch(RuntimeException|Error failure){close();throw failure;}
     }
     private void allocate(CUdeviceptr pointer,long bytes){cuMemAlloc(pointer,bytes);deviceAllocations.add(pointer);}
@@ -70,7 +71,8 @@ final class GpuCandidateGenerator implements AutoCloseable {
         int raw=records*2*n*n;
         cuLaunchKernel(generate,(raw+127)/128,1,1,128,1,1,0,stream,Pointer.to(GpuStreamingCounter.integer(records),GpuStreamingCounter.integer(n),GpuStreamingCounter.integer(floor),
             GpuStreamingCounter.integer(RetentionPlan.upper(n)),GpuStreamingCounter.integer(parentFloor),GpuStreamingCounter.integer(parents.rowBytes),Pointer.to(rows),Pointer.to(members),
-            GpuStreamingCounter.integer(lookupKind),Pointer.to(gpu.table),Pointer.to(gpu.offsets),Pointer.to(gpu.membershipBits()),GpuStreamingCounter.integer(gpu.membershipDistance()),Pointer.to(output),Pointer.to(keys),Pointer.to(counts)),null);
+            GpuStreamingCounter.integer(lookupKind),Pointer.to(gpu.table),Pointer.to(gpu.offsets),Pointer.to(gpu.membershipBits()),GpuStreamingCounter.integer(gpu.membershipDistance()),
+            Pointer.to(gpu.canonicalBloomBits()),GpuStreamingCounter.number(gpu.canonicalBloomMask()),Pointer.to(output),Pointer.to(keys),Pointer.to(counts)),null);
         cuEventRecord(end,stream);cuMemcpyDtoHAsync(hostCounts,counts,24,stream);synchronize();
         float[] elapsed={0};cuEventElapsedTime(elapsed,start,end);kernelMillis+=elapsed[0];batches++;
         int[] totals=new int[6];hostCounts.getByteBuffer(0,24).order(ByteOrder.nativeOrder()).asIntBuffer().get(totals);
@@ -97,27 +99,30 @@ final class GpuCandidateGenerator implements AutoCloseable {
     /** CPU work is buffer handling and persistent-index I/O; no mathematical search. */
     void consume(Output packet,ExtensionRun.Stats stats,AsyncCanonicalWriter writer,ExtensionResolver resolver) throws IOException {
         // Large MultiGets pin too many SST blocks. Consume bounded slices instead of constructing millions of keys.
-        final int chunk=128;boolean[] rootMoveSettled=resolveRootMoves(packet);
+        final int chunk=Integer.getInteger("extension.lookupChunk",512);
+        if(chunk<1||chunk>2048)throw new IllegalArgumentException("extension.lookupChunk must be 1..2048");
+        if(packet.rootMoveFlags!=null)for(byte flag:packet.rootMoveFlags)
+            if(flag==2)throw new IOException("Qualifying root move did not create a contractible bond");
         try(AsyncCanonicalWriter.Buffer stored=writer.buffer();ExtensionResolver.Pending unknown=resolver.buffer(null)) {
-            for(int first=0;first<packet.count&&!writer.hasMatch();first+=chunk)consumeSlice(packet,rootMoveSettled,first,Math.min(packet.count,first+chunk),stats,writer,resolver,stored,unknown);
+            for(int first=0;first<packet.count&&!writer.hasMatch();first+=chunk)
+                consumeSlice(packet,first,Math.min(packet.count,first+chunk),stats,writer,resolver,stored,unknown);
         }
     }
-    private boolean[] resolveRootMoves(Output packet) throws IOException {
-        boolean[] settled=new boolean[packet.count];if(packet.rootMoveKeys==null)return settled;
-        for(byte flag:packet.rootMoveFlags)if(flag==2)throw new IOException("Qualifying root move did not create a contractible bond");
+    private boolean[] resolveRootMoves(Output packet,int[] eligible,int count) throws IOException {
+        boolean[] settled=new boolean[count];if(count==0)return settled;
         for(int budget=Math.max(parentFloor,parents.manifest.floor);budget<=RetentionPlan.upper(n-1);budget++) {
-            int queriesCount=0;for(int i=0;i<packet.count;i++)if(packet.rootMoveFlags[i]==1&&(packet.packed[i*outBytes+8]&15)==budget)queriesCount++;
+            int queriesCount=0;for(int i=0;i<count;i++)if((packet.packed[eligible[i]*outBytes+8]&15)==budget)queriesCount++;
             if(queriesCount==0)continue;
-            byte[][] queries=new byte[queriesCount][];int[] candidates=new int[queriesCount];int q=0;
-            for(int i=0;i<packet.count;i++)if(packet.rootMoveFlags[i]==1&&(packet.packed[i*outBytes+8]&15)==budget) {
-                int offset=i*parents.payloadBytes;queries[q]=Arrays.copyOfRange(packet.rootMoveKeys,offset,offset+parents.payloadBytes);candidates[q++]=i;
+            byte[][] queries=new byte[queriesCount][];int[] positions=new int[queriesCount];int q=0;
+            for(int i=0;i<count;i++)if((packet.packed[eligible[i]*outBytes+8]&15)==budget) {
+                int offset=eligible[i]*parents.payloadBytes;queries[q]=Arrays.copyOfRange(packet.rootMoveKeys,offset,offset+parents.payloadBytes);positions[q++]=i;
             }
             int[] found=parents.distances(queries,budget);
-            for(int i=0;i<found.length;i++)if(found[i]<0)settled[candidates[i]]=true;
+            for(int i=0;i<found.length;i++)if(found[i]<0)settled[positions[i]]=true;
         }
         return settled;
     }
-    private void consumeSlice(Output packet,boolean[] rootMoveSettled,int first,int end,ExtensionRun.Stats stats,AsyncCanonicalWriter writer,ExtensionResolver resolver,
+    private void consumeSlice(Output packet,int first,int end,ExtensionRun.Stats stats,AsyncCanonicalWriter writer,ExtensionResolver resolver,
                               AsyncCanonicalWriter.Buffer stored,ExtensionResolver.Pending unknown) throws IOException {
         resolver.check();byte[] packed=packet.packed,deletionKeys=packet.deletionKeys;
         int[] answers=null;int unresolved=0;
@@ -128,17 +133,24 @@ final class GpuCandidateGenerator implements AutoCloseable {
             for(int i=first;i<end;i++)if((packed[i*outBytes+8]&0x40)!=0){candidates[q]=i;active[q]=q;q++;}
             // A single missing deletion rejects a child. Query further deletions only for surviving children.
             for(int omitted=0,remaining=unresolved;omitted<n&&remaining>0;omitted++) {
-                byte[][] queries=new byte[remaining][];
+                byte[][] queries=new byte[remaining][];int[] queried=new int[remaining];int queryCount=0,kept=0;
                 for(int i=0;i<remaining;i++) {
-                    int offset=(candidates[active[i]]*n+omitted)*parents.payloadBytes;
-                    queries[i]=Arrays.copyOfRange(deletionKeys,offset,offset+parents.payloadBytes);
+                    int candidate=active[i],record=candidates[candidate],offset=(record*n+omitted)*parents.payloadBytes;
+                    if((deletionKeys[offset]&255)==255) {
+                        answers[candidate*n+omitted]=packed[record*outBytes+8]&15;active[kept++]=candidate;
+                    }else {
+                        queries[queryCount]=Arrays.copyOfRange(deletionKeys,offset,offset+parents.payloadBytes);queried[queryCount++]=candidate;
+                    }
                 }
-                int[] found=parents.distances(queries,parentFloor);int kept=0;
-                for(int i=0;i<remaining;i++){int candidate=active[i];answers[candidate*n+omitted]=found[i];if(found[i]>=0)active[kept++]=candidate;}
+                if(queryCount>0) {
+                    if(queryCount<queries.length)queries=Arrays.copyOf(queries,queryCount);
+                    int[] found=parents.distances(queries,parentFloor);
+                    for(int i=0;i<queryCount;i++){int candidate=queried[i];answers[candidate*n+omitted]=found[i];if(found[i]>=0)active[kept++]=candidate;}
+                }
                 remaining=kept;
             }
         }
-            int answer=0;
+            int answer=0,eligibleCount=0;int[] eligible=new int[end-first],eligibleDistance=new int[end-first];
             for(int i=first;i<end;i++) {
                 int offset=i*outBytes,metadata=packed[offset+8]&255,weight=packed[offset+outBytes-1]&255;
                 long rank=0;for(int b=0;b<8;b++)rank|=(long)(packed[offset+b]&255)<<(8*b);
@@ -149,14 +161,25 @@ final class GpuCandidateGenerator implements AutoCloseable {
                     int upper=Math.min(minimum+1,RetentionPlan.upper(n));if(maximum>upper)throw new IOException("Inconsistent deletion interval");
                     if(upper<floor)continue;
                     if(maximum==upper){stored.appendPacked(packed,offset+9,maximum,weight);stats.determined.incrementAndGet();}
-                    else if(rootMoveSettled[i]){if(maximum>=floor)stored.appendPacked(packed,offset+9,maximum,weight);stats.determined.incrementAndGet();stats.rootMoveResolved.incrementAndGet();}
+                    else if(packet.rootMoveFlags!=null&&packet.rootMoveFlags[i]==1){eligible[eligibleCount]=i;eligibleDistance[eligibleCount++]=maximum;}
                     else unknown.appendRank(rank,packed,offset+9,maximum,weight);
                 }else if((metadata&0x80)!=0) {
                     int budget=metadata&15;
-                    if(rootMoveSettled[i]){if(budget>=floor)stored.appendPacked(packed,offset+9,budget,weight);stats.determined.incrementAndGet();stats.rootMoveResolved.incrementAndGet();}
+                    if(packet.rootMoveFlags!=null&&packet.rootMoveFlags[i]==1){eligible[eligibleCount]=i;eligibleDistance[eligibleCount++]=budget;}
                     else unknown.appendRank(rank,packed,offset+9,budget,weight);
                 }
                 else stored.appendPacked(packed,offset+9,metadata,weight);
+            }
+            boolean[] rootMoveSettled=resolveRootMoves(packet,eligible,eligibleCount);
+            for(int e=0;e<eligibleCount;e++) {
+                int i=eligible[e],offset=i*outBytes,distance=eligibleDistance[e],weight=packed[offset+outBytes-1]&255;
+                if(rootMoveSettled[e]) {
+                    if(distance>=floor)stored.appendPacked(packed,offset+9,distance,weight);
+                    stats.determined.incrementAndGet();stats.rootMoveResolved.incrementAndGet();
+                }else {
+                    long rank=0;for(int b=0;b<8;b++)rank|=(long)(packed[offset+b]&255)<<(8*b);
+                    unknown.appendRank(rank,packed,offset+9,distance,weight);
+                }
             }
     }
     public void close() {

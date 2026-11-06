@@ -18,6 +18,7 @@ final class GpuStreamingCounter implements AutoCloseable {
     final CUdeviceptr table=new CUdeviceptr(),offsets=new CUdeviceptr();
     private final CUdeviceptr emptyMembership=new CUdeviceptr();
     GpuMembershipTable membership;
+    GpuCanonicalBloom canonicalBloom;
     int tableDegree;
     final int[] patternFloors=new int[19];
     final int quantum;
@@ -87,6 +88,11 @@ final class GpuStreamingCounter implements AutoCloseable {
     CUdeviceptr membershipBits(){return membership==null?emptyMembership:membership.bits;}
     int membershipDegree(){return membership==null?-1:membership.degree;}
     int membershipDistance(){return membership==null?0:membership.distance;}
+    CUdeviceptr canonicalBloomBits(){return canonicalBloom==null?emptyMembership:canonicalBloom.bits;}
+    long canonicalBloomMask(){return canonicalBloom==null?0:canonicalBloom.mask;}
+    boolean canonicalBloomCovers(int degree,int floor,int ceiling) {
+        return canonicalBloom!=null&&canonicalBloom.degree==degree&&canonicalBloom.floor<=floor&&canonicalBloom.ceiling>=ceiling;
+    }
     int parentLookupKind(int n,int floor) {
         if(Boolean.getBoolean("extension.forceDiskLookups"))return 0;
         if(tableDegree>=n&&patternFloors[n]<=floor)return 1;
@@ -127,6 +133,15 @@ final class GpuStreamingCounter implements AutoCloseable {
             }
             if(!automatic)return;
         }
+    }
+    long canonicalBloomReserve(Path root,int degree,int floor,int ceiling,GpuCacheBudget budget) throws Exception {
+        long bytes=GpuCanonicalBloom.reserveBytes(root,degree,floor,ceiling);if(bytes==0)return 0;
+        activate();long[] free={0},total={0};cuMemGetInfo(free,total);return budget.fits(bytes,free[0],0)?bytes:0;
+    }
+    void loadCanonicalBloom(Path root,int degree,int floor,int ceiling,GpuCacheBudget budget) throws Exception {
+        if(canonicalBloomCovers(degree,floor,ceiling))return;
+        GpuCanonicalBloom loaded=GpuCanonicalBloom.load(this,root,degree,floor,ceiling,budget);
+        if(loaded!=null){if(canonicalBloom!=null)canonicalBloom.close();canonicalBloom=loaded;}
     }
     boolean copyMembershipFrom(GpuStreamingCounter source,long reserve) throws Exception {
         return copyMembershipFrom(source,new GpuCacheBudget(reserve,0.95));
@@ -485,6 +500,7 @@ final class GpuStreamingCounter implements AutoCloseable {
     }
     public void close() {
         if(context.contextReady)activate();
+        if(canonicalBloom!=null){canonicalBloom.close();canonicalBloom=null;}
         if(membership!=null){membership.close();membership=null;}
         if(offsetsReady){cuMemFree(offsets);offsetsReady=false;}
         if(tableReady){cuMemFree(table);tableReady=false;}
