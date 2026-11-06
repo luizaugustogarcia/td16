@@ -58,8 +58,9 @@ position, and every surviving canonical child is resolved by deletion bounds
 or exhaustive bounded search.  The search uses the odd-cycle lower bound,
 distance-preserving contractions, a slack-exact move filter, and a generalized
 root prepass based on all standardized one-symbol deletions.  Two further root
-reductions use qualifying odd-cycle covers and a newly verified $N=19$
-support-clearing classification.  We state the
+reductions use qualifying odd-cycle covers and the general support-clearing
+dichotomy for oriented odd unicycles; its largest required case, $N=19$, is
+also audited exhaustively.  We state the
 mathematical completeness conditions, describe the persistent and GPU
 implementation, and report exhaustive small-degree audits and controlled
 microbenchmarks.  Completion of the distance-eleven search with an empty
@@ -541,28 +542,42 @@ first qualifying move and queries the complete degree-$(n-1)$ store; a failed
 or inconclusive first lookup leaves the root to exact DFS.  This asymmetry can
 lose an optimization opportunity but cannot change a decision.
 
-\subsection{The \texorpdfstring{$N=19$}{N=19} oriented-unicycle reduction}
+The scan does not pre-restrict the three move symbols by cycle provenance,
+cycle size, or parity.  Instead it computes the actual odd-cycle delta and
+keeps every $+2$ move that creates a fixed point.  The contracted-child lookup
+then supplies the constructive upper bound, so this broader scan is safe for
+all provenance cases.  It is distinct from the cycle-specific sufficient
+criterion used to select the clearing branch below.
 
-Silva et al.~\cite[Proposition~7.4]{SilvaEtAl2026} show for the odd-cycle
-lengths needed in their $N=17$ proof that an oriented odd cycle either admits
-the qualifying criterion or has a support-clearing sequence of length
-$(k+1)/2$, apart from one explicitly handled local exception.  We extended
-their exhaustive route-O classification to $N=19$.
+\subsection{The general oriented-unicycle reduction}
 
-\begin{lemma}[$N=19$ unicycle classification]
-\label{lem:n19-clearing}
-Let $(\omega,\beta)$ be a realizable cyclic-target pair on 19 symbols and
-suppose that $\omega$ is an oriented 19-cycle.  If it evades the qualifying
-criterion of Silva et al., then it has a support-clearing sequence of ten block
-transpositions.
-\end{lemma}
+The route-O argument of Silva et
+al.~\cite[Proposition~7.4]{SilvaEtAl2026} is not specific to $N=19$.
+It gives the following support-size-general dichotomy.
 
-\begin{proof}[Computational verification]
-Normalize $\beta=(0\ 1\ \cdots\ 18)$ and write the cycle uniquely from
-zero.  The exhaustive route-O enumeration visited $9{,}304{,}845$ partial
-nodes and retained three normalized cycles.  Removing the unoriented survivor
-and quotienting by the auxiliary dihedral action leaves two oriented orbit
-representatives:
+\begin{proposition}[Odd-unicycle clearing]
+\label{prop:odd-unicycle-clearing}
+Let $(\omega,\beta)$ be a realizable cyclic-target pair whose unique
+nontrivial cycle is oriented and has odd support size $k\geq3$.  Either it
+admits the qualifying criterion of Silva et al., or its support has a clearing
+sequence of $(k+1)/2$ block transpositions.
+\end{proposition}
+
+The implementation tests this proposition at every DFS root, for every
+supported degree.  It first verifies that there is exactly one nontrivial
+cycle, that its support size is odd and at least three, that it is oriented,
+and that it evades the qualifying criterion.  It then accepts the root only
+when $(k+1)/2$ does not exceed the remaining budget.  Fixed points outside the
+cycle do not change the support-clearing cost.  Failure of any predicate is
+inconclusive and leaves the root to the other prepasses or exact DFS.
+
+\paragraph{$N=19$ audit.}
+The largest support needed for the degree-18 computation was checked
+independently by exhaustive enumeration.  Normalize
+$\beta=(0\ 1\ \cdots\ 18)$ and write the cycle uniquely from zero.  The
+route-O enumeration visited $9{,}304{,}845$ partial nodes and retained three
+normalized cycles.  Removing the unoriented survivor and quotienting by the
+auxiliary dihedral action leaves two oriented orbit representatives:
 \begin{verbatim}
 (0 10 1 11 2 12 3 13 4 14 5 15 6 16 7 17 8 18 9)
 (0 16 13 10 7 4 1 17 14 11 8 5 2 18 15 12 9 6 3)
@@ -570,14 +585,10 @@ representatives:
 Both representatives pass the cyclic-target realizability test, and the native
 witness search verifies a ten-move support-clearing sequence for each.  The
 enumeration prunes only conditions necessary for failure of the qualifying
-criterion, so these representatives cover every unresolved oriented case.
-\end{proof}
-
-At a degree-18 DFS root, fixed points are contracted before this reduction is
-tested.  Consequently an unresolved odd unicycle is fixed-point-free and its
-nontrivial cycle has length 19, so Lemma~\ref{lem:n19-clearing} supplies the
-ten-move upper bound.  The reduction is enabled only for $n=18$ and budgets at
-least 10; otherwise the exact DFS continues.
+criterion, so these representatives cover every unresolved oriented
+19-cycle.  This is an audit of the largest required instance of
+Proposition~\ref{prop:odd-unicycle-clearing}, not a restriction of the
+reduction to that instance.
 
 \subsection{A generalized deletion prepass}
 
@@ -727,8 +738,8 @@ Assume that:
   \item every unresolved candidate is decided by a complete bounded search;
   \item every root prepass uses only the proved one-sided conclusions in
     Propositions~\ref{prop:root-prepass} and
-    \ref{prop:qualifying-prepass}, or the complete classification in
-    Lemma~\ref{lem:n19-clearing};
+    \ref{prop:qualifying-prepass}, or
+    Proposition~\ref{prop:odd-unicycle-clearing};
   \item output is published only after all coverage equalities hold.
 \end{enumerate}
 Then the published output for a request $(n,d)$ contains exactly one canonical
@@ -806,10 +817,11 @@ following independent or cross-implementation checks.
   \item A persisted-$\D(9)$ integration run reconstructs
     $|\D(10)|=255{,}053$ and resolves 494 roots through the qualifying-move
     lookup without changing the exact output.
-  \item The $N=19$ route-O enumeration visits $9{,}304{,}845$ nodes and
-    leaves the two realizable oriented orbits in
-    Lemma~\ref{lem:n19-clearing}; native CUDA witness search and the
-    production prepass independently resolve both in ten moves.
+  \item General odd-support cases $N=5,7,9$ are checked against exact
+    small-degree distances.  The $N=19$ route-O enumeration visits
+    $9{,}304{,}845$ nodes and leaves two realizable oriented orbits; native
+    CUDA witness search and the production prepass independently resolve both
+    in ten moves.
 \end{enumerate}
 
 The production slack audit independently constructs each child word, rebuilds
@@ -863,7 +875,7 @@ These two features default to enabled and can be disabled independently with
 the Java properties \code{extension.slackMoveFilter} and
 \code{extension.rootDeletionPrepass}.  The qualifying prepass is controlled by
 \code{extension.rootMovePrepass} (default \code{auto}, with minimum budget 8),
-and the degree-18 clearing reduction by
+and the general odd-unicycle clearing reduction by
 \code{extension.oddCyclePrepass}.  They are covered by the exact integration
 tests above rather than folded into this earlier four-way timing table.
 
@@ -967,9 +979,9 @@ The resulting candidates are settled by exact deletion intervals and complete
 bounded search.  The same deletion theory yields a generalized degree-$(n-1)$
 root prepass, while the M\"uhle--Nadeau 3-cycle length gives an exact slack
 filter.  Qualifying covers followed by contraction add a one-sided lookup, and
-the exhaustive $N=19$ classification adds the degree-18 oriented-unicycle
-clearing reduction.  Each reduction has a separate audit or exact integration
-test.
+the route-O dichotomy adds a general oriented-odd-unicycle clearing reduction.
+Its $N=19$ instance is additionally audited by exhaustive classification.
+Each reduction has a separate audit or exact integration test.
 
 Once the complete run and the artifacts in
 Table~\ref{tab:final-run} are available, the final paper can replace its
@@ -997,8 +1009,8 @@ in the order in which a verifier can check them.
     absence semantics.
   \item Verify every pruning rule in bounded DFS, including cut-to-$\gamma$
     mapping, the M\"uhle--Nadeau length and cover rules, contractions, inverse
-    suppression, slack filtering, both root lookup prepasses, and the $N=19$
-    clearing classification.
+    suppression, slack filtering, both root lookup prepasses, and the general
+    odd-unicycle clearing rule together with its $N=19$ audit.
   \item Verify that all candidates are settled and all parent/generation
     coverage equalities hold.
   \item Verify atomic empty-result publication and absence of cancellation.

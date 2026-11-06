@@ -101,14 +101,15 @@ the root sortable within `r`. The resident GPU path scans all qualifying moves.
 The persisted-store path queries only the first qualifying contracted key and
 continues with exact DFS if that lookup is inconclusive.
 
-For degree 18 at budget 10, the oriented-unicycle reduction from the TD(16)
-route-O proof has been extended to `N=19`. The complete normalized-cycle search
+The oriented-unicycle reduction from the route-O proof is general for every
+odd support size `N>=3`: a realizable oriented unicycle that evades the
+qualifying criterion has an `(N+1)/2`-move support-clearing sequence. The GPU
+tests this at every root and accepts only when that cost fits the budget. For
+the largest required support, `N=19`, the complete normalized-cycle audit
 visited 9,304,845 nodes and left three cycles, two oriented orbit
-representatives. Both oriented representatives are realizable and have verified
-ten-move support-clearing sequences. Since fixed points are contracted first,
-an unresolved degree-18 odd unicycle has a single 19-cycle. Thus a realizable
-oriented unicycle that evades the qualifying criterion is safely accepted at
-budget 10; all other cases remain with the exhaustive DFS.
+representatives. Both oriented representatives are realizable and have
+verified ten-move support-clearing sequences; all unrecognized cases remain
+with the exhaustive DFS.
 
 When the goal is solely TD(18), the distance-10 branch is unnecessary. An empty
 distance-11 set establishes the upper bound 10; monotonicity from TD(17)=10

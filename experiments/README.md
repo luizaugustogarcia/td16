@@ -231,17 +231,21 @@ The RocksDB path emits only the first qualifying contracted key; if that lookup
 is inconclusive, complete DFS still settles the root. The default
 `-Dextension.rootMovePrepass=auto` enables this at budgets at least 8; `true` or
 `false` forces it, and `-Dextension.rootMoveMinBudget=...` changes the automatic
-threshold.
+threshold. This scan places no prior restriction on the three symbols' cycle
+provenance, sizes or parities: it computes the actual `+2` delta and relies on
+the contracted-child bound for the one-sided decision.
 
-Finally, the TD(16) oriented-odd-cycle reduction has been extended through
-`N=19`. After fixed-point contractions, a degree-18 oriented odd unicycle that
-evades the qualifying criterion is one of two realizable oriented orbit
-representatives, and both have verified ten-move support-clearing sequences.
-The exhaustive normalized-cycle search visited 9,304,845 nodes, retained three
-cycles, and left two oriented orbits. This reduction is restricted to `n=18`
-and budget at least 10 and is controlled by
-`-Dextension.oddCyclePrepass=false`. The kernel reports resolutions as
-`oddCycleResolved`; qualifying lookups are included in `root_move_resolved`.
+Finally, the route-O oriented-odd-cycle reduction applies to every odd support
+size `N>=3`. A realizable oriented unicycle either admits the qualifying
+criterion or has a support-clearing sequence of `(N+1)/2` moves. The kernel
+checks this rule at roots of every supported degree and accepts only when the
+computed clearing cost fits the remaining budget. The largest support needed
+here, `N=19`, also has an independent exhaustive audit: the normalized-cycle
+search visited 9,304,845 nodes, retained three cycles, and left two realizable
+oriented orbits, both with verified ten-move clearing sequences. The reduction
+is controlled by `-Dextension.oddCyclePrepass=false`. The kernel reports
+resolutions as `oddCycleResolved`; qualifying lookups are included in
+`root_move_resolved`.
 
 The reproducible four-way A/B benchmark verifies identical decisions for the
 baseline, each optimization alone and both together:
@@ -581,10 +585,11 @@ degree 11), independent BFS membership through degree 9, and reconstructed
 orbit-weighted counts for every degree-10/11 result and support set. A separate
 `D(9)->D(10)` test exercises the diameter jump: 1,143,270 generated candidates
 recover 255,053 diametral permutations; with the qualifying prepass forced,
-494 roots are resolved by the persisted-store lookup. The `N=19` tests verify
+494 roots are resolved by the persisted-store lookup. General clearing tests
+check `N=5,7,9` against exact small-degree distances. The `N=19` tests verify
 the complete survivor/orbit classification, realizability of both oriented
 representatives, their ten-move native clearing witnesses, and resolution by
-the production clearing prepass.
+the same production prepass.
 The configured GPU library path is needed for these tests:
 
 ```bash

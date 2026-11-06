@@ -100,16 +100,25 @@ class GpuExtensionTest {
             }
         }
     }
-    @Test void realizableNineteenUnicyclesUseTenMoveClearingSequences() throws Exception {
+    @Test void realizableOddUnicyclesUseTheGeneralClearingRule() throws Exception {
         byte[][] words={
+            {4,3,2,1},
+            {3,6,2,5,1,4},
+            {8,7,6,5,4,3,2,1},
             {7,14,2,9,16,4,11,18,6,13,1,8,15,3,10,17,5,12},
             {9,18,8,17,7,16,6,15,5,14,4,13,3,12,2,11,1,10}
         };
-        long[] ranks={SmallTables.rank(words[0],18),SmallTables.rank(words[1],18)};
-        try(GpuStreamingCounter gpu=new GpuStreamingCounter(null,1);
-            GpuStreamingCounter.Batch batch=gpu.new Batch(18,11,11,2,null,false,false,false,true)) {
-            assertArrayEquals(new byte[]{0,0},batch.classifyRanks(ranks,2));
-            assertEquals(2,batch.oddCycleResolved);
+        int[] clearing={3,4,5,10,10};
+        try(GpuStreamingCounter gpu=new GpuStreamingCounter(null,1)) {
+            for(int i=0;i<words.length;i++) {
+                int n=words[i].length;assertTrue(gpu.oddCyclePrepass(n));
+                long rank=SmallTables.rank(words[i],n);
+                if(n<=8)assertEquals(clearing[i],DiametralExtensionAudit.bfs(n)[(int)rank]);
+                try(GpuStreamingCounter.Batch batch=gpu.new Batch(n,clearing[i]+1,clearing[i]+1,1,null,false,false,false,true)) {
+                    assertArrayEquals(new byte[]{0},batch.classifyRanks(new long[]{rank},1),"N="+(n+1));
+                    assertEquals(1,batch.oddCycleResolved,"N="+(n+1));
+                }
+            }
         }
     }
     @Test void gpuCanonicalDeletionKeysFeedDiskLookupsWithoutCpuSorting() throws Exception {

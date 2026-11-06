@@ -152,7 +152,9 @@ final class GpuStreamingCounter implements AutoCloseable {
         membership=source.membership.copyTo(this,budget);return membership!=null;
     }
     boolean rootMovePrepass(int budget){return rootMovePrepass&&(!rootMoveAutomatic||budget>=rootMoveMinBudget);}
-    boolean oddCyclePrepass(int n,int budget){return oddCyclePrepass&&n==18&&budget>=10;}
+    /** The route-O dichotomy is support-size general; the kernel itself
+     * recognizes an odd nontrivial cycle and checks its clearing cost. */
+    boolean oddCyclePrepass(int n){return oddCyclePrepass&&n>=2;}
     /** Context-safe staged copies avoid rebuilding the same pattern table on every GPU. */
     boolean copyPatternTablesFrom(GpuStreamingCounter source) {
         return copyPatternTablesFrom(source,new GpuCacheBudget(0,0.90));
@@ -308,16 +310,16 @@ final class GpuStreamingCounter implements AutoCloseable {
             this(n,low,high,capacity,null);
         }
         Batch(int n,int low,int high,int capacity,CUstream stream) {
-            this(n,low,high,capacity,stream,slackMoveFilter,rootDeletionPrepass,rootMovePrepass(low-1),oddCyclePrepass(n,high-1));
+            this(n,low,high,capacity,stream,slackMoveFilter,rootDeletionPrepass,rootMovePrepass(low-1),oddCyclePrepass(n));
         }
         Batch(int n,int low,int high,int capacity,CUstream stream,boolean filterSlackMoves) {
-            this(n,low,high,capacity,stream,filterSlackMoves,rootDeletionPrepass,rootMovePrepass(low-1),oddCyclePrepass(n,high-1));
+            this(n,low,high,capacity,stream,filterSlackMoves,rootDeletionPrepass,rootMovePrepass(low-1),oddCyclePrepass(n));
         }
         Batch(int n,int low,int high,int capacity,CUstream stream,boolean filterSlackMoves,boolean prepassRootDeletions) {
-            this(n,low,high,capacity,stream,filterSlackMoves,prepassRootDeletions,rootMovePrepass(low-1),oddCyclePrepass(n,high-1));
+            this(n,low,high,capacity,stream,filterSlackMoves,prepassRootDeletions,rootMovePrepass(low-1),oddCyclePrepass(n));
         }
         Batch(int n,int low,int high,int capacity,CUstream stream,boolean filterSlackMoves,boolean prepassRootDeletions,boolean prepassRootMoves) {
-            this(n,low,high,capacity,stream,filterSlackMoves,prepassRootDeletions,prepassRootMoves,oddCyclePrepass(n,high-1));
+            this(n,low,high,capacity,stream,filterSlackMoves,prepassRootDeletions,prepassRootMoves,oddCyclePrepass(n));
         }
         Batch(int n,int low,int high,int capacity,CUstream stream,boolean filterSlackMoves,boolean prepassRootDeletions,boolean prepassRootMoves,boolean prepassOddCycles) {
             this.n=n;this.low=low;this.high=high;this.capacity=capacity;

@@ -49,13 +49,14 @@ A qualifying `+2` cover that creates a fixed point is followed by
 distance-preserving contraction and a complete degree-17 lookup. The resident
 path scans every qualifying move; the persisted-store path checks only the first
 qualifying contracted key, so failure is inconclusive and falls through to DFS.
-The TD(16) route-O clearing reduction of Silva et al. has also been extended to
-`N=19`: exhaustive classification visited 9,304,845 nodes, retained three
-normalized cycles and two oriented orbit representatives, and both realizable
-representatives have verified ten-move clearing sequences. After fixed-point
-contraction, this resolves a degree-18 oriented odd unicycle that evades the
-qualifying criterion. The production test confirms both representatives are
-resolved specifically by this prepass.
+The route-O clearing reduction of Silva et al. applies to every odd support
+size `N>=3`: a realizable oriented unicycle either meets the qualifying
+criterion or has an `(N+1)/2`-move support-clearing sequence. The production
+prepass implements this general rule. Exact small-degree tests cover
+`N=5,7,9`; for the largest required support, `N=19`, exhaustive classification
+visited 9,304,845 nodes, retained three normalized cycles and two oriented
+orbit representatives, and both realizable representatives have verified
+ten-move clearing sequences.
 
 This can support a computer-assisted proof when the completeness argument,
 distance-preserving symmetries, contraction rules, pruning bounds and exact

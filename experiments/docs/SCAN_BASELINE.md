@@ -74,12 +74,13 @@ The root can also be accepted after a qualifying `+2` move creates a fixed
 point: contraction preserves the child's distance and a complete degree-`n-1`
 lookup supplies the required upper bound. Resident tables scan all qualifying
 moves; the persisted-store path checks only the first qualifying contracted key
-and treats an inconclusive lookup as no decision. At degree 18 and budget at
-least 10, a separate prepass recognizes a realizable oriented odd unicycle that
-evades the qualifying criterion. The exhaustive `N=19` route-O extension visited
-9,304,845 nodes, retained three normalized cycles and two oriented orbit
-representatives, and verified a ten-move clearing sequence for both. This last
-rule is degree-specific; disabling it leaves the complete DFS unchanged.
+and treats an inconclusive lookup as no decision. A separate prepass recognizes
+a realizable oriented odd unicycle on any odd support `N>=3` that evades the
+qualifying criterion and fits its `(N+1)/2`-move clearing cost within the
+budget. The exhaustive `N=19` route-O audit visited 9,304,845 nodes, retained
+three normalized cycles and two oriented orbit representatives, and verified a
+ten-move clearing sequence for both. Disabling the general rule leaves the
+complete DFS unchanged.
 
 The tables through degree 9 are computed by BFS in memory at startup. Larger
 degrees are counted by scanning rank chunks, testing extended-toric

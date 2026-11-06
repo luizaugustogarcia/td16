@@ -124,10 +124,11 @@ __device__ void lower_bound_permutation(const Byte* p,int n,Byte* omega) {
 __device__ void omega_of_word(const Byte* word,int n,Byte* omega) {
     int previous=0;for(int i=0;i<n;i++){int v=word[i];omega[v]=previous==n?0:previous+1;previous=v;}omega[0]=previous==n?0:previous+1;
 }
-// The route-O reduction used in the TD(16) proof extends through N=19.
-// For a realizable oriented odd unicycle, either the criterion below supplies
-// a qualifying 2-move or the support has a clearing sequence of (k+1)/2
-// block transpositions.  Every DFS word is realizable by construction.
+// The route-O reduction is general for every odd support size k>=3.  For a
+// realizable oriented odd unicycle, either the criterion below supplies a
+// qualifying 2-move or the support has a clearing sequence of (k+1)/2 block
+// transpositions.  Every DFS word is realizable by construction; fixed points
+// outside the unique nontrivial cycle do not change its support cost.
 __device__ int odd_unicycle_clearing_moves(const Byte* word,int n) {
     int N=n+1;Byte omega[19],cycle[19],position[19];omega_of_word(word,n,omega);
     position[0]=0;for(int i=0;i<n;i++)position[word[i]]=i+1;
@@ -220,6 +221,10 @@ __device__ int root_qualifying_move_result(const Byte* p,int n,int remaining,con
     for(int cut=0;cut<cut_count;cut++) {
         int code=cuts[cut],a=code&31,b=(code>>5)&31,c=code>>10;
         int x=p[a]-1,y=p[b]-1,z=c<n?p[c]-1:n;
+        // Do not restrict x,y,z by cycle provenance, size or parity.  The
+        // exact delta routine traces those cycles, and any actual +2 move
+        // that creates a contractible bond is safe once the child bound below
+        // succeeds, regardless of which provenance case produced it.
         // childOmega[x]=omega[z], childOmega[y]=omega[x],
         // childOmega[z]=omega[y].  Only these images change, so any fixed
         // point below is newly created by this move.  Test this cheap
