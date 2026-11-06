@@ -14,6 +14,6 @@ exec bash "$task_repo/experiments/run.sh" diameter --no-build \
   --rocks-memtable-mib 2048 --rocks-sst-mib 2048 --rocks-cache-mib 16384 \
   --gpu-devices 0,1,2,3 --gpu-slots 8 --gpu-slot-mib 0 --vram-fraction 0.95 \
   --gpu-batch-records 2097152 --gpu-queue 128 --gpu-parent-batch 8192 \
-  --gpu-quantum 4096 --gpu-pattern-degree 13 --gpu-membership-degree 14 \
+  --gpu-quantum 4096 \
   --cuda-ptx-dir "$task_repo/experiments/target/native" \
   --log-file "$task_repo/experiments/logs/extension.log" "$@"

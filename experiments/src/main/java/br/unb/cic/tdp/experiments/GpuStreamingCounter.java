@@ -33,26 +33,40 @@ final class GpuStreamingCounter implements AutoCloseable {
         if(quantum<1)throw new IllegalArgumentException("GPU quantum must be positive");
         this.quantum=quantum;
         context=new GpuDiametralFilter(deviceOrdinal);tableDegree=tables==null?-1:tables.degree;
+        Arrays.fill(patternFloors,Integer.MAX_VALUE);
+        if(tables!=null)Arrays.fill(patternFloors,0,tableDegree+1,0);
         try {
             boolean soa=Boolean.parseBoolean(System.getProperty("extension.gpuSoa","true"));
             String ptx=ExperimentResources.ptx("streaming-count-"+(soa?"soa":"aos"),context.architecture,
                 ()->ExperimentResources.read("cuda/streaming-count.cu"),"--define-macro="+(soa?"SOA_STACK":"AOS_STACK"));
             cuModuleLoadData(module,ptx);moduleReady=true;
+            verifyPatternLayout();
             cuModuleGetFunction(filterRoots,module,"filter_count_roots");
             cuModuleGetFunction(validateRoots,module,"validate_root_keys");
             cuModuleGetFunction(initialize,module,"initialize_count");cuModuleGetFunction(advance,module,"advance_count");
             byte[] data=tables==null?new byte[]{0}:tables.distances;
-            int[] starts=new int[38];if(tables!=null)System.arraycopy(tables.offsets,0,starts,0,tables.offsets.length);
+            long[] starts=new GpuPatternLayout(Math.max(0,tableDegree)).offsets;
             byte[] packed=new byte[Math.max(4,((data.length+7)/8)*4)];Arrays.fill(packed,(byte)0xff);
             for(int i=0;i<data.length;i++){int shift=(i&1)*4;packed[i>>1]=(byte)((packed[i>>1]&~(15<<shift))|((data[i]&15)<<shift));}
             cuMemAlloc(table,packed.length);tableReady=true;tableBytes=packed.length;cuMemcpyHtoD(table,Pointer.to(packed),packed.length);
-            cuMemAlloc(offsets,152);offsetsReady=true;cuMemcpyHtoD(offsets,Pointer.to(starts),152);
+            cuMemAlloc(offsets,GpuPatternLayout.METADATA_BYTES);offsetsReady=true;cuMemcpyHtoD(offsets,Pointer.to(starts),GpuPatternLayout.METADATA_BYTES);
             // Consumers use nonblocking streams, which do not wait for legacy-stream uploads.
             cuCtxSynchronize();
         }catch(Exception|Error error){close();throw error;}
     }
     static Pointer integer(int n){return Pointer.to(new int[]{n});}
     static Pointer number(long n){return Pointer.to(new long[]{n});}
+    private void verifyPatternLayout() {
+        try {
+            CUdeviceptr width=new CUdeviceptr();long[] bytes={0};int[] actual={0};
+            cuModuleGetGlobal(width,bytes,module,"pattern_offset_bytes");
+            if(bytes[0]!=Integer.BYTES)throw new IllegalStateException("Invalid pattern offset metadata");
+            cuMemcpyDtoH(Pointer.to(actual),width,Integer.BYTES);
+            if(actual[0]!=Long.BYTES)throw new IllegalStateException("Expected 64-bit pattern offsets");
+        }catch(RuntimeException error){
+            throw new IllegalStateException("Incompatible CUDA pattern layout; rebuild the native PTX with -Pcuda-native",error);
+        }
+    }
     void activate(){cuCtxSetCurrent(context.context);}
     CUdeviceptr membershipBits(){return membership==null?emptyMembership:membership.bits;}
     int membershipDegree(){return membership==null?-1:membership.degree;}
@@ -62,22 +76,59 @@ final class GpuStreamingCounter implements AutoCloseable {
         if(tableDegree>=n&&patternFloors[n]<=floor)return 1;
         return membershipDegree()==n&&membershipDistance()==floor?2:0;
     }
+    /** Protect a useful bitmap when its full four-bit rank table cannot fit.
+     * Otherwise greedily loading a smaller dense table could crowd it out. */
+    long membershipReserve(Path root,int patternRequested,int requested,GpuCacheBudget budget) throws Exception {
+        String setting=System.getProperty("extension.gpuMembershipDegree","auto");
+        boolean automatic=setting.equals("auto");int maximum=automatic?requested:Integer.parseInt(setting);
+        if(maximum<0||maximum>18)throw new IllegalArgumentException("GPU membership degree must be auto or 0..18");
+        activate();long[] free={0},total={0};cuMemGetInfo(free,total);LayerCatalog catalog=new LayerCatalog(root);
+        for(int degree=maximum;degree>0;degree--) {
+            if(degree<=requested&&catalog.has(degree,RetentionPlan.upper(degree))) {
+                if(degree<=patternRequested&&degree<=GpuPatternLayout.configuredDegree()&&
+                    budget.fits(new GpuPatternLayout(degree).bytes,free[0],tableBytes))return 0;
+                long bytes=GpuMembershipTable.bytesForDegree(degree);
+                if(budget.fits(bytes,free[0],0))return bytes;
+            }
+            if(!automatic)break;
+        }
+        return 0;
+    }
     void loadMembershipTable(Path root,int requested,long reserve) throws Exception {
-        int degree=Integer.getInteger("extension.gpuMembershipDegree",14);
-        if(degree<0||degree>18)throw new IllegalArgumentException("GPU membership degree must be 0..18");
-        if(membership==null&&degree>0&&degree<=requested)membership=GpuMembershipTable.load(this,root,degree,reserve);
+        loadMembershipTable(root,requested,new GpuCacheBudget(reserve,0.95));
+    }
+    void loadMembershipTable(Path root,int requested,GpuCacheBudget budget) throws Exception {
+        String setting=System.getProperty("extension.gpuMembershipDegree","auto");
+        boolean automatic=setting.equals("auto");int maximum=automatic?requested:Integer.parseInt(setting);
+        if(maximum<0||maximum>18)throw new IllegalArgumentException("GPU membership degree must be auto or 0..18");
+        // Try the nearest useful completed degree first. Larger ranks are useful
+        // both to parent lookups and to distance-preserving DFS contractions.
+        for(int degree=maximum;degree>0;degree--) {
+            boolean covered=tableDegree>=degree&&patternFloors[degree]!=Integer.MAX_VALUE;
+            if(!covered&&degree<=requested&&(membership==null||degree>membership.degree)) {
+                GpuMembershipTable loaded=GpuMembershipTable.load(this,root,degree,budget);
+                if(loaded!=null){if(membership!=null)membership.close();membership=loaded;return;}
+            }
+            if(!automatic)return;
+        }
     }
     boolean copyMembershipFrom(GpuStreamingCounter source,long reserve) throws Exception {
+        return copyMembershipFrom(source,new GpuCacheBudget(reserve,0.95));
+    }
+    boolean copyMembershipFrom(GpuStreamingCounter source,GpuCacheBudget budget) throws Exception {
         if(membership!=null)return true;
-        if(source.membership==null)return false;
-        membership=source.membership.copyTo(this,reserve);return membership!=null;
+        if(source.membership==null||tableDegree>=source.membership.degree&&patternFloors[source.membership.degree]!=Integer.MAX_VALUE)return false;
+        membership=source.membership.copyTo(this,budget);return membership!=null;
     }
     /** Context-safe staged copies avoid rebuilding the same pattern table on every GPU. */
     boolean copyPatternTablesFrom(GpuStreamingCounter source) {
+        return copyPatternTablesFrom(source,new GpuCacheBudget(0,0.90));
+    }
+    boolean copyPatternTablesFrom(GpuStreamingCounter source,GpuCacheBudget budget) {
         if(source==this)return true;
         activate();long[] free={0},total={0};cuMemGetInfo(free,total);
-        if(source.tableBytes>(free[0]+tableBytes)*0.60)return false;
-        int[] starts=new int[38];source.activate();cuMemcpyDtoH(Pointer.to(starts),source.offsets,152);
+        if(source.tableDegree>GpuPatternLayout.configuredDegree()||!budget.fits(source.tableBytes,free[0],tableBytes))return false;
+        long[] starts=new long[2*GpuPatternLayout.DEGREES];source.activate();cuMemcpyDtoH(Pointer.to(starts),source.offsets,GpuPatternLayout.METADATA_BYTES);
         activate();cuMemFree(table);tableReady=false;cuMemAlloc(table,source.tableBytes);tableReady=true;tableBytes=source.tableBytes;
         Pointer staging=new Pointer();long chunk=Math.min(4L<<20,tableBytes);cuMemHostAlloc(staging,chunk,CU_MEMHOSTALLOC_PORTABLE);
         try {
@@ -85,7 +136,7 @@ final class GpuStreamingCounter implements AutoCloseable {
                 long bytes=Math.min(chunk,tableBytes-offset);source.activate();cuMemcpyDtoH(staging,source.table.withByteOffset(offset),bytes);
                 activate();cuMemcpyHtoD(table.withByteOffset(offset),staging,bytes);
             }
-            cuMemcpyHtoD(offsets,Pointer.to(starts),152);tableDegree=source.tableDegree;
+            cuMemcpyHtoD(offsets,Pointer.to(starts),GpuPatternLayout.METADATA_BYTES);tableDegree=source.tableDegree;
             System.arraycopy(source.patternFloors,0,patternFloors,0,patternFloors.length);
             cuCtxSynchronize();
         }finally{activate();cuMemFreeHost(staging);}
@@ -94,43 +145,46 @@ final class GpuStreamingCounter implements AutoCloseable {
     }
     /** Build exact pattern tables on the GPU from completed canonical stores, including all orbit members. */
     void loadPersistedTables(Path root,int requested) throws Exception {
+        loadPersistedTables(root,requested,new GpuCacheBudget(0,0.90));
+    }
+    void loadPersistedTables(Path root,int requested,GpuCacheBudget budget) throws Exception {
         activate();
-        int maximum=0;long entries=1;long[] free={0},total={0};cuMemGetInfo(free,total);
+        int maximum=0;long[] free={0},total={0};cuMemGetInfo(free,total);
         LayerCatalog catalog=new LayerCatalog(root);
         int patternHorizon=Integer.getInteger("benchmark.patternHorizon",0);
         RetentionPlan patternPlan=patternHorizon==0?null:new RetentionPlan(patternHorizon);
-        if(patternPlan!=null&&patternHorizon<Math.min(13,requested))throw new IllegalArgumentException("Pattern horizon must cover the requested table degree");
-        int limit=Integer.getInteger("extension.gpuPatternMaxDegree",13);
-        if(limit<0||limit>13)throw new IllegalArgumentException("GPU pattern degree must be 0..13");
+        int limit=GpuPatternLayout.configuredDegree();
+        if(patternPlan!=null&&patternHorizon<Math.min(limit,requested))throw new IllegalArgumentException("Pattern horizon must cover the requested table degree");
         for(int n=1;n<=Math.min(limit,requested);n++){
-            if(catalog.tailFloor(n)<0)break;
-            long next=entries+SmallTables.FACTORIAL[n];if(((next+7)/8)*4>(free[0]+tableBytes)*0.60)break;
-            maximum=n;entries=next;
+            if(catalog.tailFloor(n)<0)continue;
+            if(!budget.fits(new GpuPatternLayout(n).bytes,free[0],tableBytes))break;
+            maximum=n;
         }
         if(maximum<=tableDegree)return;
-        long began=System.nanoTime();int[] starts=new int[38];long count=0;
-        for(int n=0;n<=maximum;n++){starts[n]=Math.toIntExact(count);count+=SmallTables.FACTORIAL[n];}
-        long size=((count+7)/8)*4;
+        long began=System.nanoTime();GpuPatternLayout layout=new GpuPatternLayout(maximum);
+        long[] starts=layout.offsets;long size=layout.bytes;
         cuMemFree(table);tableReady=false;cuMemAlloc(table,size);tableReady=true;tableBytes=size;cuMemsetD8(table,(byte)-1,size);tableDegree=maximum;
+        Arrays.fill(patternFloors,Integer.MAX_VALUE);
         CUfunction populate=new CUfunction();cuModuleGetFunction(populate,module,"populate_core_table");
         CUdeviceptr rows=new CUdeviceptr();cuMemAlloc(rows,16384L*14);
         try {
             for(int n=1;n<=maximum;n++) {
-                int sourceFloor=catalog.tailFloor(n),selectedFloor=patternPlan==null?sourceFloor:Math.max(sourceFloor,patternPlan.floor[n]);
+                int sourceFloor=catalog.tailFloor(n);if(sourceFloor<0)continue;
+                int selectedFloor=patternPlan==null?sourceFloor:Math.max(sourceFloor,patternPlan.floor[n]);
                 try(CanonicalLayerStore store=catalog.open(n,selectedFloor,RetentionPlan.upper(n));CanonicalLayerStore.BatchCursor cursor=store.source(selectedFloor,16384,Runtime.getRuntime().availableProcessors())) {
                     // An absent member is below the retained floor. Encode its proven upper bound.
-                    starts[19+n]=selectedFloor;patternFloors[n]=selectedFloor;
+                    starts[GpuPatternLayout.DEGREES+n]=selectedFloor;patternFloors[n]=selectedFloor;
                     byte[] batch;long loaded=0;
                     while((batch=cursor.nextBatch(16384))!=null) {
                         int records=batch.length/store.rowBytes,jobs=records*2*(n+1);loaded+=records;
                         cuMemcpyHtoD(rows,Pointer.to(batch),batch.length);
                         cuLaunchKernel(populate,(jobs+255)/256,1,1,256,1,1,0,null,Pointer.to(integer(records),integer(n),integer(store.rowBytes),
-                            integer(starts[n]),Pointer.to(rows),Pointer.to(table)),null);
+                            number(starts[n]),Pointer.to(rows),Pointer.to(table)),null);
                     }
                     if(loaded!=store.manifest.canonicalSize())throw new java.io.IOException("Incomplete GPU pattern source n="+n+" loaded="+loaded+" expected="+store.manifest.canonicalSize());
                 }
             }
-            cuMemcpyHtoD(offsets,Pointer.to(starts),152);
+            cuMemcpyHtoD(offsets,Pointer.to(starts),GpuPatternLayout.METADATA_BYTES);
             CUfunction identities=new CUfunction();cuModuleGetFunction(identities,module,"initialize_pattern_identities");
             cuLaunchKernel(identities,1,1,1,32,1,1,0,null,Pointer.to(integer(maximum),Pointer.to(offsets),Pointer.to(table)),null);
             cuCtxSynchronize();

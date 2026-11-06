@@ -43,7 +43,7 @@ final class ExtensionRun {
             });
             for(int n=1;n<=through;n++) {
                 int patternHorizon=Integer.getInteger("extension.patternHorizon",0);
-                if(n==14&&config.gpu()&&patternHorizon>0)plan.preparePatterns(patternHorizon,13);
+                if(n==14&&config.gpu()&&patternHorizon>0&&GpuPatternLayout.configuredDegree()>=13)plan.preparePatterns(patternHorizon,13);
                 if(n==config.maxN()&&Boolean.getBoolean("extension.diameterOnly")) {
                     int diameter=plan.determine(n);
                     writeDecision(config,n,diameter,decision[0]);

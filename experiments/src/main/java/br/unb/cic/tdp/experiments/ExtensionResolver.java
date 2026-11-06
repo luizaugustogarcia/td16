@@ -125,27 +125,30 @@ final class ExtensionResolver implements AutoCloseable {
             if(parentBatch<1)throw new IllegalArgumentException("GPU parent batch must be positive");
             for(int ordinal:settings.layout().devices()) {
                 GpuStreamingCounter gpu=factory.open(ordinal,tables,quantum);Device device=new Device(ordinal,gpu);opened.add(device);
+                long workspaceReserve=settings.layout().slotsPerDevice()*(GpuStreamingCounter.fixedBatchBytes(degree)+
+                    batchRecords*GpuStreamingCounter.bytesPerJob(degree,RetentionPlan.upper(degree)+1));
+                long cacheReserve=GpuCandidateGenerator.deviceBytes(degree,parentBatch,false)+workspaceReserve+(256L<<20);
+                GpuCacheBudget cacheBudget=new GpuCacheBudget(cacheReserve,vramFraction);
+                long membershipReserve=gpu.membershipReserve(dataDirectory,degree-1,degree,cacheBudget);
+                GpuCacheBudget patternBudget=cacheBudget.reserve(membershipReserve);
                 List<Device> sources=opened.subList(0,opened.size()-1).stream().sorted(Comparator.comparingInt((Device d)->d.gpu.tableDegree).reversed()).toList();
-                for(Device source:sources)if(gpu.copyPatternTablesFrom(source.gpu))break;
+                for(Device source:sources)if(gpu.copyPatternTablesFrom(source.gpu,patternBudget))break;
                 // A larger GPU may grow beyond a cache copied from a smaller GPU.
-                gpu.loadPersistedTables(dataDirectory,Math.min(13,degree-1));
+                gpu.loadPersistedTables(dataDirectory,degree-1,patternBudget);
                 if(Boolean.getBoolean("extension.verifyGpuPatterns")&&gpu.tableDegree>0)
                     try(CanonicalLayerStore source=new LayerCatalog(dataDirectory).open(gpu.tableDegree,gpu.patternFloors[gpu.tableDegree],RetentionPlan.upper(gpu.tableDegree))) {
                         gpu.verifyStoredHistogram(source.manifest);
                     }
-                long workspaceReserve=settings.layout().slotsPerDevice()*(GpuStreamingCounter.fixedBatchBytes(degree)+
-                    batchRecords*GpuStreamingCounter.bytesPerJob(degree,RetentionPlan.upper(degree)+1));
-                long cacheReserve=GpuCandidateGenerator.deviceBytes(degree,parentBatch,false)+workspaceReserve+(256L<<20);
-                for(Device source:sources)if(gpu.copyMembershipFrom(source.gpu,cacheReserve))break;
+                for(Device source:sources)if(gpu.copyMembershipFrom(source.gpu,cacheBudget))break;
                 // A completed higher layer also accelerates a later support layer
                 // at the same degree (notably E(14,7) after D(14)).
-                gpu.loadMembershipTable(dataDirectory,degree,cacheReserve);
+                gpu.loadMembershipTable(dataDirectory,degree,cacheBudget);
                 gpu.activate();long[] free={0},total={0};cuMemGetInfo(free,total);
                 boolean dense=gpu.parentLookupKind(degree-1,Math.max(0,floor-1))!=0;
                 long generationBytes=GpuCandidateGenerator.deviceBytes(degree,parentBatch,dense);
                 device.slotBudget=settings.slotBudget(free[0],generationBytes,vramFraction);
                 GpuStreamingCounter.capacityForBudget(degree,RetentionPlan.upper(degree)+1,1,device.slotBudget);
-                System.out.printf("GPU_DEVICE ordinal=%d name=%s slots=%d slot_budget_bytes=%d generation_reserved_bytes=%d pattern_degree=%d membership_degree=%d membership_bytes=%d%n",ordinal,gpu.context.deviceName,settings.layout().slotsPerDevice(),device.slotBudget,generationBytes,gpu.tableDegree,gpu.membershipDegree(),gpu.membership==null?0:gpu.membership.bytes);
+                System.out.printf("GPU_DEVICE ordinal=%d name=%s slots=%d slot_budget_bytes=%d generation_reserved_bytes=%d pattern_degree=%d pattern_bytes=%d membership_degree=%d membership_bytes=%d cache_workspace_reserved_bytes=%d%n",ordinal,gpu.context.deviceName,settings.layout().slotsPerDevice(),device.slotBudget,generationBytes,gpu.tableDegree,gpu.tableBytes,gpu.membershipDegree(),gpu.membership==null?0:gpu.membership.bytes,cacheReserve);
             }
             devices=List.copyOf(opened);int slotCount=settings.layout().totalSlots();
             slots=Executors.newFixedThreadPool(slotCount,Thread.ofPlatform().name("extension-gpu-slot-",0).factory());

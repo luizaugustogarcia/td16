@@ -22,16 +22,18 @@ final class GpuMembershipTable implements AutoCloseable {
         this.owner=owner;this.degree=degree;this.distance=distance;this.canonicalRecords=canonicalRecords;this.ordinaryMembers=ordinaryMembers;
         bytes=bytesForDegree(degree);owner.activate();cuMemAlloc(bits,bytes);allocated=true;
     }
-    private static boolean fits(GpuStreamingCounter owner,long bytes,long reserve) {
-        if(reserve<0)throw new IllegalArgumentException("Negative GPU workspace reserve");
+    private static boolean fits(GpuStreamingCounter owner,long bytes,GpuCacheBudget budget) {
         owner.activate();long[] free={0},total={0};cuMemGetInfo(free,total);
-        boolean fits=bytes<=(long)(free[0]*0.95)-reserve;
-        if(!fits)System.out.printf("GPU_MEMBERSHIP_SKIP device=%d bitmap_bytes=%d free_bytes=%d reserved_bytes=%d reason=insufficient-VRAM%n",owner.context.deviceOrdinal,bytes,free[0],reserve);
+        boolean fits=budget.fits(bytes,free[0],0);
+        if(!fits)System.out.printf("GPU_MEMBERSHIP_SKIP device=%d bitmap_bytes=%d free_bytes=%d reserved_bytes=%d reason=insufficient-VRAM%n",owner.context.deviceOrdinal,bytes,free[0],budget.reservedBytes());
         return fits;
     }
     static GpuMembershipTable load(GpuStreamingCounter owner,Path root,int degree,long reserve) throws Exception {
+        return load(owner,root,degree,new GpuCacheBudget(reserve,0.95));
+    }
+    static GpuMembershipTable load(GpuStreamingCounter owner,Path root,int degree,GpuCacheBudget budget) throws Exception {
         int distance=RetentionPlan.upper(degree);LayerCatalog catalog=new LayerCatalog(root);
-        if(!catalog.has(degree,distance)||!fits(owner,bytesForDegree(degree),reserve))return null;
+        if(!catalog.has(degree,distance)||!fits(owner,bytesForDegree(degree),budget))return null;
         long began=System.nanoTime();GpuMembershipTable result=null;
         try(CanonicalLayerStore store=catalog.open(degree,distance,distance);
             CanonicalLayerStore.BatchCursor cursor=store.source(distance,16384,Runtime.getRuntime().availableProcessors())) {
@@ -59,7 +61,10 @@ final class GpuMembershipTable implements AutoCloseable {
         }catch(Exception|Error error){if(result!=null)result.close();throw error;}
     }
     GpuMembershipTable copyTo(GpuStreamingCounter target,long reserve) throws Exception {
-        if(!fits(target,bytes,reserve))return null;
+        return copyTo(target,new GpuCacheBudget(reserve,0.95));
+    }
+    GpuMembershipTable copyTo(GpuStreamingCounter target,GpuCacheBudget budget) throws Exception {
+        if(!fits(target,bytes,budget))return null;
         long began=System.nanoTime();GpuMembershipTable result=new GpuMembershipTable(target,degree,distance,canonicalRecords,ordinaryMembers);
         Pointer staging=new Pointer();boolean pinned=false;
         try {

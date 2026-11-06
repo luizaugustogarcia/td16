@@ -1,5 +1,6 @@
 typedef unsigned char Byte;
 typedef unsigned long long Word;
+__device__ __constant__ int pattern_offset_bytes=sizeof(Word);
 __device__ __constant__ Word factorial[19]={1ULL,1ULL,2ULL,6ULL,24ULL,120ULL,720ULL,5040ULL,40320ULL,362880ULL,3628800ULL,39916800ULL,479001600ULL,6227020800ULL,87178291200ULL,1307674368000ULL,20922789888000ULL,355687428096000ULL,6402373705728000ULL};
 __device__ int orbit_weight(const Byte* word,int n) {
     // Fixed target sigma=(0 1 ... n), left products as in ../td.
@@ -55,10 +56,10 @@ __device__ Word packed_orbit_rank(const Byte* packed,int n,int action) {
     }
     return rank;
 }
-extern "C" __global__ void populate_core_table(int records,int n,int row_bytes,int offset,const Byte* rows,signed char* table) {
+extern "C" __global__ void populate_core_table(int records,int n,int row_bytes,Word offset,const Byte* rows,signed char* table) {
     int job=blockIdx.x*blockDim.x+threadIdx.x,N=n+1,parent=job/(2*N),action=job%(2*N);
     if(parent>=records)return;
-    Word index=(Word)offset+packed_orbit_rank(rows+parent*row_bytes+1,n,action);unsigned shift=(index&7)*4;
+    Word index=offset+packed_orbit_rank(rows+parent*row_bytes+1,n,action);unsigned shift=(index&7)*4;
     unsigned* cell=((unsigned*)table)+(index>>3);
     atomicAnd(cell,~(15U<<shift));atomicOr(cell,(unsigned)rows[parent*row_bytes]<<shift);
 }
@@ -81,13 +82,18 @@ extern "C" __global__ void audit_membership(const unsigned* bits,Word words,Word
 __device__ __forceinline__ int membership_distance(const unsigned* bits,Word rank,int distance) {
     return (bits[rank>>5]&(1U<<(rank&31)))?distance:-distance-1;
 }
-extern "C" __global__ void initialize_pattern_identities(int maximum,const int* offsets,signed char* table) {
-    int n=threadIdx.x;if(n>maximum)return;Word index=(unsigned)offsets[n];
+extern "C" __global__ void initialize_pattern_identities(int maximum,const Word* offsets,signed char* table) {
+    int n=threadIdx.x;if(n>maximum)return;Word index=offsets[n];
     atomicAnd(((unsigned*)table)+(index>>3),~(15U<<((index&7)*4)));
 }
-__device__ __forceinline__ int pattern_distance(const signed char* table,const int* offsets,int n,Word rank) {
-    Word index=(Word)(unsigned)offsets[n]+rank;int value=(((const Byte*)table)[index>>1]>>((index&1)*4))&15;
-    return value==15?-offsets[19+n]-1:value;
+__device__ __forceinline__ int pattern_distance(const signed char* table,const Word* offsets,int n,Word rank) {
+    Word index=offsets[n]+rank;int value=(((const Byte*)table)[index>>1]>>((index&1)*4))&15;
+    return value==15?-(int)offsets[19+n]-1:value;
+}
+// Bounded diagnostics can probe high-rank entries without scanning an entire table.
+extern "C" __global__ void query_pattern_distances(int n,int jobs,const Word* ranks,const signed char* table,const Word* offsets,int* distances) {
+    int job=blockIdx.x*blockDim.x+threadIdx.x;if(job>=jobs)return;
+    distances[job]=pattern_distance(table,offsets,n,ranks[job]);
 }
 extern "C" __global__ void audit_canonical_weights(int jobs,int n,Byte* weights) {
     int index=blockIdx.x*blockDim.x+threadIdx.x;if(index>=jobs)return;
@@ -105,7 +111,7 @@ __device__ int lower_bound(const Byte* p,int n) {
     }
     return (n+1-odd)/2;
 }
-__device__ int core_distance(const Byte* p,int n,const signed char* table,const int* offsets,int table_degree,
+__device__ int core_distance(const Byte* p,int n,const signed char* table,const Word* offsets,int table_degree,
     const unsigned* membership,int membership_degree,int membership_floor) {
     if(table_degree<0 && membership_degree<0)return -1;
     Byte tmp[18];for(int i=0;i<n;i++)tmp[i]=p[i];
@@ -164,7 +170,7 @@ extern "C" __global__ void initialize_count(int jobs,int n,int frames,int stride
 }
 extern "C" __global__ void advance_count(int active_count,int begin,const int* active,int* output,
     int* output_count,int n,int frames,int stride,int low,int high,int quantum,const int* cuts,int cut_count,
-    Byte* stack,short* next,signed char* depth,Byte* stage,const Byte* weights,Byte* results,const signed char* table,const int* offsets,
+    Byte* stack,short* next,signed char* depth,Byte* stage,const Byte* weights,Byte* results,const signed char* table,const Word* offsets,
     int table_degree,const unsigned* membership,int membership_degree,int membership_floor,Word* counters) {
     int index=begin+blockIdx.x*blockDim.x+threadIdx.x;if(index>=active_count)return;
     int job=active[index],d=depth[job],phase=stage[job],classification=-1;
@@ -272,7 +278,7 @@ extern "C" __global__ void prepare_parent_members(int parents,int n,int row_byte
     if(action<2*N){for(int i=0;i<action;i++)if(ranks[i]==rank){rank=~0ULL;break;}members[parent*2*N+action]=rank;if(rank!=~0ULL)atomicAdd(counts+4,n+1);}
 }
 extern "C" __global__ void generate_extensions(int parents,int n,int floor,int upper,int parent_floor,int row_bytes,const Byte* rows,const Word* members,
-    int dense_parent,const signed char* table,const int* offsets,const unsigned* membership,int membership_floor,Byte* output,Byte* deletion_keys,int* counts) {
+    int dense_parent,const signed char* table,const Word* offsets,const unsigned* membership,int membership_floor,Byte* output,Byte* deletion_keys,int* counts) {
     int job=blockIdx.x*blockDim.x+threadIdx.x,total=parents*2*n*n;if(job>=total)return;
     int member_index=job/n,position=job%n,parent=member_index/(2*n);Word member_rank=members[member_index];if(member_rank==~0ULL)return;
     Byte member[18],word[18],deletion[18],omega[19];decode_rank(member_rank,n-1,member);
@@ -302,10 +308,10 @@ extern "C" __global__ void generate_extensions(int parents,int n,int floor,int u
     }
 }
 
-extern "C" __global__ void audit_pattern_histogram(int n,const signed char* table,const int* offsets,Word* histogram) {
+extern "C" __global__ void audit_pattern_histogram(int n,const signed char* table,const Word* offsets,Word* histogram) {
     Word count=factorial[n],rounded=(count+31)&~31ULL,stride=(Word)gridDim.x*blockDim.x;
     for(Word rank=(Word)blockIdx.x*blockDim.x+threadIdx.x;rank<rounded;rank+=stride) {
-        Word index=(Word)(unsigned)offsets[n]+rank;
+        Word index=offsets[n]+rank;
         int value=rank<count?(((const Byte*)table)[index>>1]>>((index&1)*4))&15:16;
         for(int d=0;d<16;d++) {
             unsigned mask=__ballot_sync(0xffffffff,value==d);

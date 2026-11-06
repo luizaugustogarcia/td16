@@ -39,7 +39,7 @@ final class MembershipDiagnostics {
         byte[] keys=Files.readAllBytes(Path.of(System.getProperty("sample.file")));int jobs=keys.length/width;
         if(jobs<1||keys.length%width!=0)throw new IOException("Malformed sample key file");
         try(GpuStreamingCounter gpu=new GpuStreamingCounter(null,Integer.getInteger("extension.gpuQuantum",4096))) {
-            gpu.loadPersistedTables(ExtensionConfig.system().dataDirectory(),Math.min(13,n-1));
+            gpu.loadPersistedTables(ExtensionConfig.system().dataDirectory(),n-1);
             CUdeviceptr input=new CUdeviceptr(),output=new CUdeviceptr();cuMemAlloc(input,keys.length);
             try {
                 cuMemAlloc(output,jobs*8L);

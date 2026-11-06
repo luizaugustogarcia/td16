@@ -52,4 +52,22 @@ class LazyLayerPlanTest {
         int before=sets.generated.size();plan.preparePatterns(17,13);assertEquals(before,sets.generated.size());
         plan.diameter(14);plan.diameter(15);assertFalse(sets.has(14,7));
     }
+    @Test void degreeFourteenPreparationOnlyReordersSetsAlreadyNeededForD17() throws Exception {
+        Sets ordinary=new Sets();LazyLayerPlan baseline=new LazyLayerPlan(ordinary);
+        for(int n=1;n<=17;n++)baseline.diameter(n);
+        Sets cached=new Sets();LazyLayerPlan plan=new LazyLayerPlan(cached);
+        for(int n=1;n<=13;n++)plan.diameter(n);
+        plan.preparePatterns(17,13);plan.diameter(14);
+        assertFalse(cached.has(14,7));
+        plan.preparePatterns(17,14);
+        assertTrue(cached.has(14,7));assertTrue(cached.has(14,8));
+        assertFalse(cached.has(14,6));assertFalse(cached.has(13,5));
+        int before=cached.generated.size();plan.preparePatterns(17,14);
+        assertEquals(before,cached.generated.size());
+        for(int n=15;n<=17;n++)plan.diameter(n);
+        assertEquals(ordinary.complete,cached.complete);
+        cached.empty18=true;
+        assertEquals(10,plan.determine(18));
+        assertFalse(cached.has(18,10));assertFalse(cached.has(14,6));
+    }
 }

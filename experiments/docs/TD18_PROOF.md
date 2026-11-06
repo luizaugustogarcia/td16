@@ -50,3 +50,10 @@ the existing distance-preserving adjacency contractions in DFS. A partial
 bitmap is never used. If the table is unavailable, search uses the previous
 pattern tables and persistent membership index. This cache changes the
 evaluation of valid bounds; it does not change which exact sets are required.
+
+Cache selection is automatic per GPU. A larger four-bit table may include
+E(14,7) alongside E(14,8) after both stores are complete. An absent entry then
+proves distance at most 6, while retained entries supply their exact distance.
+Missing lower-degree stores remain unknown rather than being treated as
+complete tables. All table offsets and ordinary ranks are 64-bit. Caching
+does not request new sets or change the extension dependencies.

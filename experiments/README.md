@@ -37,6 +37,38 @@ bash experiments/run.sh diameter --max-n 18 \
 tail -f experiments/logs/extension.log
 ```
 
+For the NOVA University Lisbon server specified in
+`Concurso-GPU-16_2026_DL60_DII.pdf` (pages 2, 4 and 7), run the
+[NOVA H200 launcher](scripts/servers/nova-h200.sh) with no arguments:
+
+```bash
+bash experiments/scripts/servers/nova-h200.sh
+```
+
+It builds the experiment, copies its dependencies and compiles native CUDA PTX
+before starting the TD(18) diameter search in the foreground. The machine needs
+Linux x86_64, JDK 21 or newer, Maven 3.9+, CMake 3.24+, a C++ compiler, and an
+installed CUDA toolkit and driver supporting the H200; no separate build or
+environment-variable setup is required when these tools are on `PATH`.
+The profile selects CUDA device `0` (H200 NVL, 141 GB), 16 search slots with
+automatic workspace sizing using 90% of remaining VRAM, 86 host workers, a 256 GiB
+maximum Java heap, a 96 GiB persistence staging budget and an 8 GiB aggregate.
+GPU lookup caches are selected automatically from completed sets and available
+VRAM. On the H200, the four-bit cache can grow through degree 14 (43.74 GiB).
+These are starting defaults for the specified 512 GB RAM server, not measured
+performance settings. The PDF lists 86 cores and does not establish that two
+processors are installed. RocksDB uses 64 write workers, 32 background jobs,
+eight flush workers, 2 GiB memtables/SST targets and a 16 GiB cache per store.
+
+The launcher works from any current directory. Data goes to
+`experiments/data/search/`, progress appends to `experiments/logs/extension.log`,
+and GC logs go to `experiments/logs/gc.log`, all relative to the checkout.
+Keep the checkout on the server's NVMe storage. Re-running the same command
+reuses completed exact sets and regenerates an interrupted set; it does not
+clear existing data. Follow progress with the `tail` command above. This
+launcher includes its own build step, so invoke it directly rather than through
+the existing `start-production.sh` launcher, which expects an already-built run.
+
 `diameter` determines TD(18), treating it as unknown. It searches distance 11,
 stops at the first verified match, or concludes TD(18)=10 after exhaustive
 exclusion. It never generates the distance-10 degree-18 set. A positive partial
@@ -201,37 +233,57 @@ batches. The batch-record limit can keep actual allocation below the cap.
 Shared pattern tables, generation buffers, CUDA runtime resources and pinned
 host buffers are outside this per-slot cap.
 
-Each GPU owns its pattern table, requiring about 3.14 GiB per GPU through
-degree 13. Tables are copied between contexts through a small host staging
+Before each computation, every GPU automatically loads useful completed
+distance sets into resident lookup tables. Cache selection uses that device's
+free VRAM after reserving generation buffers, the configured search batches
+for all its slots, a 256 MiB margin and the `--vram-fraction` headroom. A device
+with less memory selects smaller caches and keeps using the persistent index
+for other lookups. Loading a cache reads completed stores; it does not generate
+additional exact sets.
+If the next useful degree fits as a bitmap but not as a four-bit table, its
+bitmap space is protected before loading smaller pattern tables.
+
+Each GPU owns its four-bit pattern table, requiring about 3.14 GiB through
+degree 13, or 43.74 GiB through degree 14. Selection supports all experiment
+degrees through 18, with 64-bit entry offsets and allocation sizes; the
+factorial growth and available VRAM determine the practical limit. Tables are
+copied between contexts through a small host staging
 buffer pinned with CUDA's [portable allocation flag](https://docs.nvidia.com/cuda/archive/12.6.0/cuda-driver-api/group__CUDA__MEM.html),
 so every context can use it. Each device can grow its cache independently.
 A device with insufficient memory builds a smaller table and continues
 using the persistent index where necessary. Search and generation synchronize
 through blocking CUDA completion events, following the emitter's slot design.
 
-After the complete D(14) store is available, each sufficiently large GPU also
-loads a one-bit membership table indexed by the ordinary permutation rank.
-It occupies 10,897,286,400 bytes (10.15 GiB); together with the four-bit tables,
-the lookup data occupies 13.29 GiB per GPU, before generation and DFS buffers.
+If a useful completed diametral set lies beyond the selected four-bit cache,
+the GPU also tries a one-bit membership table, starting at the nearest degree
+to the current computation and falling back to smaller completed degrees.
+It skips a bitmap whose information is already covered by the four-bit table.
+For D(14), this occupies 10,897,286,400 bytes (10.15 GiB); together with the
+degree-13 four-bit tables, the lookup data occupies 13.29 GiB per GPU, before
+generation and DFS buffers.
 CUDA expands the canonical source orbits. Both the number of source records
 and the bitmap population count must agree with the completed manifest before
 the table becomes available to the search. Additional devices copy the table
 through portable pinned host memory and independently check its population.
 
-D(15) uses this bitmap for its degree-14 deletion lookups on the GPU. The DFS
+D(15) can use this bitmap for its degree-14 deletion lookups on the GPU. The DFS
 also queries it when distance-preserving adjacency contractions leave a
 degree-14 state, so later degrees can benefit. A set bit means exact distance
 8; an unset bit proves only distance at most 7. In particular, this does not
-replace the distance-7 support store needed for E(15,8); its deletion lookups
-still use the persistent index. No extra exact sets are generated for this cache.
+replace the distance-7 support store needed for E(15,8). Once that store exists,
+a sufficiently large GPU loads both degree-14 distances into the four-bit
+cache and handles those deletion lookups directly. Smaller devices continue
+using the persistent index. No extra exact sets are generated for this cache.
 When that degree-14 distance-7 support store is generated, however, the already
 completed D(14) bitmap answers its `CanSort(7)` queries directly. The support
 set still has to be enumerated and persisted, but those queries need no DFS.
 
-`--gpu-membership-degree 14` is the default; `0` disables it. The smaller
-degree override is useful for exhaustive checks. `--gpu-pattern-degree 13`
-sets the maximum four-bit table degree. Membership tables are optional per
-device: memory fitting reserves generation buffers, a full configured batch
+Both `--gpu-membership-degree` and `--gpu-pattern-degree` default to `auto`.
+No cache parameter is required on any GPU. A numeric membership degree selects
+that exact degree; a numeric pattern degree caps the four-bit table. `0`
+disables the respective cache, and smaller overrides are useful for exhaustive
+checks. Membership tables are optional per device: memory fitting reserves
+generation buffers, a full configured batch
 for every slot, and a safety margin before allocation. Devices on which the
 bitmap does not fit retain the existing lookup path. The bitmap is rebuilt
 from the canonical stores when needed and is not persisted as another certificate.
@@ -251,7 +303,9 @@ a separate baseline.
 
 Completed stores also supply resident pattern tables for the exact search.
 Their ordinary orbit members are expanded on the GPU into four-bit entries.
-Tables through degree 13 occupy approximately 3.14 GiB.
+The degree-14 cache covers all ordinary ranks, retains exact distances from
+completed upper-tail stores, and uses a proven upper bound for absent entries.
+It does not claim an exact distance for every lower-distance permutation.
 The actual degree is limited by available VRAM. Missing members of a retained
 tail supply a proven upper bound, which is used only when it settles the
 current bounded search. Larger parent sets use the persisted canonical index.
@@ -266,6 +320,12 @@ their lazy schedule. Preparing the cache changes when required work happens;
 it adds no sets beyond the D(17) dependency closure. `--pattern-horizon 0`
 disables this preparation. Current configuration and log locations are in
 [OPERATIONS.md](docs/OPERATIONS.md).
+
+`GPU_DEVICE` logs report each device's selected `pattern_degree`,
+`pattern_bytes`, `membership_degree`, `membership_bytes` and workspace reserve.
+After updating from the old 32-bit pattern layout, rebuild native PTX before
+using `--no-build`; stale kernels are rejected at startup. The NOVA launcher
+performs this build automatically.
 
 CPU workers overlap record handling and persistent-index I/O with CUDA
 generation and sorting. `--cpu-threads` controls this bounded host pipeline.
@@ -413,13 +473,25 @@ parent coverage mismatches, and the absence of the degree-18 distance-10 branch.
 
 GPU-enabled tests additionally check the supplied-rank result ordering, kernel
 yield boundaries, GPU generation with resident and disk deletion lookups,
-sparse pattern bounds, shared-context cancellation, persistence through 9,
-and the genuine `D(9)->D(10)`
-jump: 1,143,270 generated candidates recover 255,053 diametral permutations.
+sparse pattern bounds, shared-context cancellation, and a consecutive GPU run
+from an empty directory through degree 11 with automatic caches. That run
+checks every diametral count (including 255,053 at degree 10 and 12,537,954 at
+degree 11), independent BFS membership through degree 9, and reconstructed
+orbit-weighted counts for every degree-10/11 result and support set. A separate
+`D(9)->D(10)` test exercises the diameter jump: 1,143,270 generated candidates
+recover 255,053 diametral permutations.
 The configured GPU library path is needed for these tests:
 
 ```bash
 mvn -pl experiments -am -DgpuTests=true verify
+```
+
+Run only the consecutive degree-1-through-11 test with:
+
+```bash
+mvn -pl experiments -am -DgpuTests=true \
+  '-Dtest=GpuExtensionTest#persistsEveryRequiredLayerThroughElevenOnGpu' \
+  -Dsurefire.failIfNoSpecifiedTests=false verify
 ```
 
 The mathematical derivation and audit procedure are in

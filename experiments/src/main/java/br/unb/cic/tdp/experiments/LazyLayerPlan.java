@@ -33,9 +33,9 @@ final class LazyLayerPlan {
         System.out.printf("DECIDE n=%d lower=%d upper=%d stop_at_first_match=true%n",n,lower,upper);
         return sets.exists(n,upper)?upper:lower;
     }
-    /** Prepare a small pattern cache from sets already required by a fixed, known dependency horizon. */
+    /** Prepare a pattern cache from sets already required by a fixed, known dependency horizon. */
     void preparePatterns(int horizon,int degree) throws Exception {
-        if(degree<1||degree>13||degree>horizon)throw new IllegalArgumentException("Invalid pattern preparation degree");
+        if(degree<1||degree>GpuPatternLayout.MAX_DEGREE||degree>horizon)throw new IllegalArgumentException("Invalid pattern preparation degree");
         RetentionPlan dependencies=new RetentionPlan(horizon);
         System.out.printf("PATTERN_PREPARE through=%d dependency_horizon=%d floor=%d%n",degree,horizon,dependencies.floor[degree]);
         for(int d=dependencies.floor[degree];d<=RetentionPlan.upper(degree);d++)require(degree,d);
