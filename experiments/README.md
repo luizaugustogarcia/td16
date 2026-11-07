@@ -50,6 +50,14 @@ existing `experiments/data/` and `experiments/logs/` contents before starting
 TD(18). It refuses to clean while another experiment JVM is active. Its fixed
 settings are tuned for this machine's 8 GiB GPU, 22 CPU threads and 32 GiB RAM;
 progress is written to `experiments/logs/extension.log`.
+Resume the same local data without deleting completed layers with:
+
+```bash
+bash experiments/scripts/servers/local-rtx4070-fresh.sh --resume
+```
+
+An interrupted exact layer is regenerated from its beginning; completed layers
+are reused.
 
 When a complete parent layer no longer fits as an exact resident GPU table,
 the extension stage builds a negative-only GPU Bloom filter from its canonical
@@ -541,6 +549,7 @@ bash experiments/run.sh count --max-n 18 \
   --batch-records 16384 --write-queue 8 \
   --gpu-batch-records 16384 --gpu-queue 8 --gpu-slots 4 \
   --gpu-parent-batch 4096 --gpu-quantum 4096 \
+  --lookup-chunk 262144 --rocks-multiget-keys 262144 \
   --rocks-write-threads 22 --rocks-background-jobs 11 --rocks-flush-threads 4 \
   --rocks-memtable-mib 256 --rocks-sst-mib 256 --rocks-cache-mib 512 \
   --data-dir experiments/data/extension \
@@ -548,6 +557,8 @@ bash experiments/run.sh count --max-n 18 \
 ```
 
 `--no-gpu` selects CPU-only exact queries. `--base-degree` supports 0 through 9.
+`--lookup-chunk` bounds each host candidate slice; `--rocks-multiget-keys`
+bounds each JNI `MultiGet`. Both accept 1 through 262,144.
 `--no-build` reuses the already-built module and copied dependencies.
 `--log-file` appends console output, including a run/PID header.
 Progress includes a rolling `settled_per_minute` rate for canonical instances;

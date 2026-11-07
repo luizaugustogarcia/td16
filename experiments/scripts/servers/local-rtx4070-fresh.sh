@@ -2,13 +2,13 @@
 # Fresh local TD(18) profile for this workstation:
 # RTX 4070 Laptop GPU (8 GiB), Core Ultra 9 185H (22 threads), 32 GiB RAM.
 #
-# This launcher intentionally deletes all prior experiment data and logs. It
-# takes no arguments so that the clean-run profile cannot be altered silently.
+# With no arguments this launcher intentionally deletes all prior experiment
+# data and logs. --resume preserves completed stores and appends to the log.
 set -euo pipefail
 
-if [[ $# -ne 0 ]]; then
-  printf 'Usage: %s (no arguments)\n' "$0" >&2
-  exit 2
+task_resume=false
+if [[ $# -eq 1 && $1 == --resume ]]; then task_resume=true
+elif [[ $# -ne 0 ]]; then printf 'Usage: %s [--resume]\n' "$0" >&2; exit 2
 fi
 
 task_repo=$(cd "$(dirname "$0")/../../.." && pwd)
@@ -110,9 +110,15 @@ export GPU_NVRTC_LIB="$task_nvrtc"
 task_nvrtc_version=$(readlink -f "$GPU_NVRTC_LIB/libnvrtc.so.12" |
   sed -nE 's/.*libnvrtc\.so\.([0-9]+\.[0-9]+).*/\1/p')
 
-printf 'Building clean Ada (compute_89) and Blackwell (compute_120) PTX with CUDA %s...\n' "$task_cuda_version"
-mvn -q -pl experiments -am -Pcuda-native -Dtdp.cudaArchitectures='89;120' \
-  -DskipTests clean package dependency:copy-dependencies
+if [[ $task_resume == true ]]; then
+  printf 'Rebuilding Ada (compute_89) and Blackwell (compute_120) PTX with CUDA %s...\n' "$task_cuda_version"
+  mvn -q -pl experiments -am -Pcuda-native -Dtdp.cudaArchitectures='89;120' \
+    -DskipTests package dependency:copy-dependencies
+else
+  printf 'Building clean Ada (compute_89) and Blackwell (compute_120) PTX with CUDA %s...\n' "$task_cuda_version"
+  mvn -q -pl experiments -am -Pcuda-native -Dtdp.cudaArchitectures='89;120' \
+    -DskipTests clean package dependency:copy-dependencies
+fi
 
 # These two directories are the documented runtime-only locations. Validate
 # the resolved paths before the requested destructive cleanup.
@@ -121,10 +127,17 @@ if [[ "$task_data_root" != "$task_repo/experiments/data" ||
   printf 'Refusing cleanup because a runtime path resolved unexpectedly.\n' >&2
   exit 1
 fi
-printf 'Deleting previous run data: %s\nDeleting previous run logs: %s\n' \
-  "$task_data_root" "$task_log_root"
-rm -rf -- "$task_data_root" "$task_log_root"
-mkdir -p "$task_data" "$task_log_root"
+if [[ $task_resume == true ]]; then
+  if [[ ! -d $task_data ]]; then printf 'Cannot resume: data directory is missing: %s\n' "$task_data" >&2; exit 1; fi
+  printf 'Preserving completed run data in %s and resuming at the first missing exact layer.\n' "$task_data"
+  mkdir -p "$task_log_root"
+  rm -f -- "$task_log_root/extension.pid" "$task_log_root/monitor.pid"
+else
+  printf 'Deleting previous run data: %s\nDeleting previous run logs: %s\n' \
+    "$task_data_root" "$task_log_root"
+  rm -rf -- "$task_data_root" "$task_log_root"
+  mkdir -p "$task_data" "$task_log_root"
+fi
 
 {
   date -u '+START_UTC=%Y-%m-%dT%H:%M:%SZ'
@@ -175,8 +188,11 @@ task_forward_signal() {
 trap task_stop_children EXIT
 trap task_forward_signal INT TERM
 
-printf 'Starting a fresh TD(18) run on %s.\nData: %s\nLog: %s\n' \
-  "$task_gpu_name" "$task_data" "$task_log"
+if [[ $task_resume == true ]]; then task_launch_label='Resuming the TD(18) run'
+else task_launch_label='Starting a fresh TD(18) run'
+fi
+printf '%s on %s.\nData: %s\nLog: %s\n' \
+  "$task_launch_label" "$task_gpu_name" "$task_data" "$task_log"
 printf 'Follow progress with: tail -f %q\n' "$task_log"
 
 bash "$task_repo/experiments/run.sh" diameter --no-build \
@@ -188,7 +204,7 @@ bash "$task_repo/experiments/run.sh" diameter --no-build \
   --rocks-memtable-mib 256 --rocks-sst-mib 256 --rocks-cache-mib 512 \
   --gpu-devices 0 --gpu-slots 4 --gpu-slot-mib 0 --vram-fraction 0.90 \
   --gpu-batch-records 262144 --gpu-queue 32 --gpu-parent-batch 4096 \
-  --gpu-quantum 65536 \
+  --gpu-quantum 65536 --lookup-chunk 262144 --rocks-multiget-keys 262144 \
   --log-file "$task_log" &
 task_search_pid=$!
 printf '%s\n' "$task_search_pid" > "$task_log_root/extension.pid"

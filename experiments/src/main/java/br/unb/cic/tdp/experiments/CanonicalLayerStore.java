@@ -99,8 +99,18 @@ final class CanonicalLayerStore implements AutoCloseable {
         if(requiredFloor<manifest.floor)throw new IllegalArgumentException("Requested distance layer was not retained");
         int[] distances=new int[keys.length];Arrays.fill(distances,-1);
         if(parts!=null) {
-            for(Part part:parts){int[] found=part.store.distances(keys,Math.max(requiredFloor,part.store.manifest.floor));
-                for(int i=0;i<found.length;i++)if(found[i]>=0&&(part.mask&(1<<found[i]))!=0)distances[i]=found[i];}
+            int unresolved=keys.length;int[] positions=new int[unresolved];for(int i=0;i<unresolved;i++)positions[i]=i;
+            for(Part part:parts) {
+                if(unresolved==0)break;
+                byte[][] pending=new byte[unresolved][];for(int i=0;i<unresolved;i++)pending[i]=keys[positions[i]];
+                int[] found=part.store.distances(pending,Math.max(requiredFloor,part.store.manifest.floor));int remaining=0;
+                for(int i=0;i<found.length;i++) {
+                    int position=positions[i],distance=found[i];
+                    if(distance>=0&&(part.mask&(1<<distance))!=0)distances[position]=distance;
+                    else positions[remaining++]=position;
+                }
+                unresolved=remaining;
+            }
             return distances;
         }
         try {
@@ -112,7 +122,7 @@ final class CanonicalLayerStore implements AutoCloseable {
                 }
             }else {
                 // Bound block pins per JNI call, independently of the producer packet size.
-                final int chunk=2048;List<byte[]> input=Arrays.asList(keys);
+                final int chunk=RocksTuning.multiGetKeys();List<byte[]> input=Arrays.asList(keys);
                 for(int first=0;first<keys.length;first+=chunk) {
                     List<byte[]> values=database.multiGetAsList(input.subList(first,Math.min(keys.length,first+chunk)));
                     for(int i=0;i<values.size();i++){byte[] value=values.get(i);if(value==null)continue;if(value.length!=1)throw new IOException("Malformed canonical distance value");

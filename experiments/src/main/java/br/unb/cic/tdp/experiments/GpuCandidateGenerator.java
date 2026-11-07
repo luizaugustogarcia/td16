@@ -99,8 +99,8 @@ final class GpuCandidateGenerator implements AutoCloseable {
     /** CPU work is buffer handling and persistent-index I/O; no mathematical search. */
     void consume(Output packet,ExtensionRun.Stats stats,AsyncCanonicalWriter writer,ExtensionResolver resolver) throws IOException {
         // Large MultiGets pin too many SST blocks. Consume bounded slices instead of constructing millions of keys.
-        final int chunk=Integer.getInteger("extension.lookupChunk",512);
-        if(chunk<1||chunk>2048)throw new IllegalArgumentException("extension.lookupChunk must be 1..2048");
+        final int chunk=Integer.getInteger("extension.lookupChunk",262144);
+        if(chunk<1||chunk>262144)throw new IllegalArgumentException("extension.lookupChunk must be 1..262144");
         if(packet.rootMoveFlags!=null)for(byte flag:packet.rootMoveFlags)
             if(flag==2)throw new IOException("Qualifying root move did not create a contractible bond");
         try(AsyncCanonicalWriter.Buffer stored=writer.buffer();ExtensionResolver.Pending unknown=resolver.buffer(null)) {

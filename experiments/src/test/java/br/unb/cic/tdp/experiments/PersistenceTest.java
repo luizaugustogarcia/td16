@@ -143,6 +143,26 @@ class PersistenceTest {
         assertFalse(catalog.has(18,10));
         try(var store=catalog.open(18,11,11);var cursor=store.source(11,16,2)){assertNull(cursor.nextBatch(16));}
     }
+    @Test void compositeLookupsPreserveInputOrderWhileSkippingResolvedKeys() throws Exception {
+        int n=5;byte[] exact=DiametralExtensionAudit.bfs(n),word=new byte[n],omega=new byte[n+1];
+        for(int layer=2;layer<=3;layer++)try(AsyncCanonicalWriter writer=new AsyncCanonicalWriter(root,n,layer,n,16,2,true)) {
+            try(AsyncCanonicalWriter.Buffer buffer=writer.buffer()) {
+                for(int rank=0;rank<exact.length;rank++) {
+                    SmallTables.unrank(rank,n,word,0);int weight=ToricOrbit.weight(word,n);if(weight==0)continue;
+                    ToricOrbit.omegaFromWord(word,n,omega);buffer.append(omega,exact[rank],weight);
+                }
+            }
+            writer.finish();
+        }
+        byte[][] keys=new byte[4099][];
+        for(int i=0;i<keys.length;i++) {
+            SmallTables.unrank(i%exact.length,n,word,0);ToricOrbit.canonicalOmega(word,n,omega);keys[i]=PackedPermutation5.encode(omega,n+1);
+        }
+        try(CanonicalLayerStore store=new LayerCatalog(root).open(n,2,3)) {
+            int[] distances=store.distances(keys,2);
+            for(int i=0;i<keys.length;i++)assertEquals(exact[i%exact.length]>=2?exact[i%exact.length]:-1,distances[i]);
+        }
+    }
     @Test void malformedDistanceValuesAreRejectedByLookupAndStreaming() throws Exception {
         byte[] omega={0,1};Path target=CanonicalLayerStore.path(root,1,0);
         try(AsyncCanonicalWriter writer=new AsyncCanonicalWriter(root,1,0,1,1,1)) {

@@ -10,6 +10,7 @@ final class RocksTuning {
     static long memtableBytes(){return mib("rocks.memtableMiB",256);}
     static long sstBytes(){return mib("rocks.sstMiB",256);}
     static long cacheBytes(){return mib("rocks.cacheMiB",512);}
+    static int multiGetKeys(){int value=Integer.getInteger("rocks.multiGetKeys",262144);if(value<1||value>262144)throw new IllegalArgumentException("rocks.multiGetKeys must be 1..262144");return value;}
     private static int positive(String name,int fallback){int value=Integer.getInteger(name,fallback);if(value<1)throw new IllegalArgumentException(name+" must be positive");return value;}
     private static long mib(String name,int fallback){return Math.multiplyExact((long)positive(name,fallback),1L<<20);}
     static BlockBasedTableConfig table(BloomFilter filter,Cache cache){return new BlockBasedTableConfig().setFilterPolicy(filter)
@@ -27,6 +28,6 @@ final class RocksTuning {
         .setAllowConcurrentMemtableWrite(true).setEnablePipelinedWrite(true)
         .setCompressionType(CompressionType.LZ4_COMPRESSION).setMaxOpenFiles(1024).setBytesPerSync(4L<<20)
         .setCompactionReadaheadSize(4L<<20).setTableFormatConfig(table(filter,cache));}
-    static void log(){System.out.printf("ROCKSDB write_threads=%d background_jobs=%d flush_threads=%d memtable_MiB=%d max_memtables=6 SST_target_MiB=%d cache_MiB=%d WAL=false compression=LZ4 index=two-level partitioned_filters=true metadata_block_KiB=4 max_multiget_keys=2048%n",
-        writeThreads(),backgroundJobs(),flushThreads(),memtableBytes()>>20,sstBytes()>>20,cacheBytes()>>20);}
+    static void log(){System.out.printf("ROCKSDB write_threads=%d background_jobs=%d flush_threads=%d memtable_MiB=%d max_memtables=6 SST_target_MiB=%d cache_MiB=%d WAL=false compression=LZ4 index=two-level partitioned_filters=true metadata_block_KiB=4 max_multiget_keys=%d%n",
+        writeThreads(),backgroundJobs(),flushThreads(),memtableBytes()>>20,sstBytes()>>20,cacheBytes()>>20,multiGetKeys());}
 }

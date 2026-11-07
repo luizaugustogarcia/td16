@@ -35,7 +35,9 @@ while [[ $# -gt 0 ]]; do
     --cuda-ptx-dir) task_options+=("-Dextension.cudaPtxDir=$2"); task_native=true; shift 2 ;;
     --gpu-quantum) task_options+=("-Dextension.gpuQuantum=$2"); shift 2 ;;
     --gpu-parent-batch) task_options+=("-Dextension.gpuParentBatch=$2"); shift 2 ;;
+    --lookup-chunk) task_options+=("-Dextension.lookupChunk=$2"); shift 2 ;;
     --benchmark-n) task_options+=("-Dbenchmark.n=$2"); shift 2 ;;
+    --benchmark-distance) task_options+=("-Dbenchmark.distance=$2"); shift 2 ;;
     --benchmark-budget) task_options+=("-Dbenchmark.budget=$2"); shift 2 ;;
     --benchmark-jobs) task_options+=("-Dbenchmark.jobs=$2"); shift 2 ;;
     --benchmark-repeats) task_options+=("-Dbenchmark.repeats=$2"); shift 2 ;;
@@ -50,6 +52,7 @@ while [[ $# -gt 0 ]]; do
     --rocks-memtable-mib) task_options+=("-Drocks.memtableMiB=$2"); shift 2 ;;
     --rocks-sst-mib) task_options+=("-Drocks.sstMiB=$2"); shift 2 ;;
     --rocks-cache-mib) task_options+=("-Drocks.cacheMiB=$2"); shift 2 ;;
+    --rocks-multiget-keys) task_options+=("-Drocks.multiGetKeys=$2"); shift 2 ;;
     --log-file) task_log_file=$2; shift 2 ;;
     *) printf 'Unknown argument: %s\n' "$1" >&2; exit 2 ;;
   esac
