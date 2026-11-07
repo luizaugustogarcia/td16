@@ -27,7 +27,7 @@ final class AsyncCanonicalWriter implements AutoCloseable {
     private final AtomicLong written=new AtomicLong();
     private final AtomicLong enqueueWaitNanos=new AtomicLong();
     private final AtomicInteger inFlight=new AtomicInteger();
-    private final AtomicLong aggregateBytes=new AtomicLong(),aggregateFlushes=new AtomicLong(),nativeWrites=new AtomicLong();
+    private final AtomicLong aggregateBytes=new AtomicLong(),aggregateFlushes=new AtomicLong(),nativeWrites=new AtomicLong(),nativeWriteBytes=new AtomicLong();
     private final AtomicInteger aggregateSegments=new AtomicInteger();
     private volatile boolean finishing,closed;
     private volatile long expectedOutputCount=-1;
@@ -66,6 +66,7 @@ final class AsyncCanonicalWriter implements AutoCloseable {
     long aggregateTargetBytes(){return sizing.aggregation().targetBytes();}
     long aggregateFlushes(){return aggregateFlushes.get();}
     long nativeWrites(){return nativeWrites.get();}
+    long nativeWriteBytes(){return nativeWriteBytes.get();}
     int pendingCapacity(){return sizing.pendingBatches();}
     double enqueueWaitSeconds(){return enqueueWaitNanos.get()/1e9;}
     void check() throws IOException {Throwable error=failure.get();if(error!=null)throw new IOException("Asynchronous canonical persistence failed",error);}
@@ -122,8 +123,8 @@ final class AsyncCanonicalWriter implements AutoCloseable {
     private void writeLoop() {
         try {
             long[] canonical=new long[12],weighted=new long[12];boolean commit=false;
-            try(BloomFilter filter=new BloomFilter(10,false);Cache cache=new LRUCache(RocksTuning.cacheBytes());
-                Options options=RocksTuning.writerOptions(filter,cache);
+            try(Cache cache=new LRUCache(RocksTuning.cacheBytes());
+                Options options=RocksTuning.writerOptions(cache);
                 RocksDB database=RocksDB.open(options,staging.resolve("db").toString());
                 WriteOptions writeOptions=new WriteOptions().setDisableWAL(true).setSync(false)) {
                 try(WriteDispatcher dispatcher=new WriteDispatcher(database,writeOptions,canonical,weighted)) {
@@ -141,7 +142,7 @@ final class AsyncCanonicalWriter implements AutoCloseable {
                     dispatcher.drain();
                     if(commit) {
                         try(FlushOptions flush=new FlushOptions().setWaitForFlush(true)){database.flush(flush);}
-                        System.out.printf("ROCKSDB_FINAL n=%d records=%d aggregate_flushes=%d native_write_calls=%d SST_bytes=%d pending_compaction_bytes=%d%n",degree,written.get(),aggregateFlushes.get(),nativeWrites.get(),
+                        System.out.printf("ROCKSDB_FINAL n=%d records=%d aggregate_flushes=%d native_write_calls=%d native_write_bytes=%d SST_bytes=%d pending_compaction_bytes=%d%n",degree,written.get(),aggregateFlushes.get(),nativeWrites.get(),nativeWriteBytes.get(),
                             database.getLongProperty("rocksdb.total-sst-files-size"),database.getLongProperty("rocksdb.estimate-pending-compaction-bytes"));
                     }
                 }
@@ -237,6 +238,7 @@ final class AsyncCanonicalWriter implements AutoCloseable {
         }
         try(WriteBatch writes=new WriteBatch(encoded)){database.write(options,writes);}
         nativeWrites.incrementAndGet();
+        nativeWriteBytes.addAndGet(encoded.length);
         synchronized(canonical){for(int d=0;d<12;d++){canonical[d]+=counts[d];weighted[d]+=weights[d];}}
         written.addAndGet(batch.records);
     }

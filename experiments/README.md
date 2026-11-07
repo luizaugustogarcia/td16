@@ -488,7 +488,12 @@ through bounded queues. Full memtables flush automatically; small periodic
 forced flushes are avoided.
 
 At degree completion, all decisions and buffers drain and construction RocksDB
-flushes to SST files. Finalization streams sorted ranks into the archive,
+flushes to SST files. Construction disables automatic leveled compaction and
+its backlog/file-count write throttles. The parallel archive workers merge the
+flushed sorted runs once; construction does not build Bloom filters. The remaining
+delay-rate setting is 1 GiB/s, with memtable capacity enforcing RAM backpressure.
+`native_ingest_MiB_per_second` measures completed native writes before compression.
+Finalization streams sorted ranks into the archive,
 verifies counts and writes its checksum. The database is removed by default;
 the archive and manifest are published by an atomic directory rename. Only
 complete published stores can become parents.
@@ -511,7 +516,8 @@ Blackwell PTX with CUDA 12.8+ within the driver's supported version. Set
 launcher accepts this profile and `--resume` to reuse completed layers.
 
 The [EPYC RTX 5090 profile](scripts/servers/rtx5090-epyc.sh) detects all 256
-logical CPUs, with 256 writers, 128 background jobs and 32 flush workers. The
+logical CPUs, with 256 writers, 256 background-job slots and 256 flush-worker
+slots. Both RTX 5090 profiles scale these worker pools to all detected CPUs. The
 faster NVMe profile uses 48 GiB staging, an 8 GiB aggregate, 16 MiB native
 batches and 2 GiB memtables/SST targets. Parent packets are halved to 2,048
 records because RAM stays at 256 GB. Its

@@ -24,8 +24,8 @@ done
 if [[ ! $task_cpus =~ ^[1-9][0-9]*$ ]]; then
   printf 'TDP_CPU_THREADS must be positive.\n' >&2; exit 2
 fi
-task_background=$((task_cpus / 2)); if ((task_background < 2)); then task_background=2; fi
-task_flush=$((task_background / 4)); if ((task_flush < 1)); then task_flush=1; fi
+task_background=$task_cpus; if ((task_background < 2)); then task_background=2; fi
+task_flush=$task_cpus
 task_command=(bash "$task_repo/experiments/run.sh" diameter --no-build
   --data-dir "$task_data" --max-n 18 --pattern-horizon 17
   --cpu-threads "$task_cpus" --batch-records 65536

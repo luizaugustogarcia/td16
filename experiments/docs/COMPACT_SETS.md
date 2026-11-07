@@ -54,7 +54,17 @@ exactly.
 ## Construction and computation
 
 Fixed-width big-endian construction keys make RocksDB iteration match archive
-rank order. Finalization streams that order without an external sort or a
+rank order. Construction flushes immutable sorted runs and disables background
+leveled compaction. The parallel archive range scans merge those runs once,
+without repeatedly rewriting them during ingestion. Compaction-backlog write
+limits and level-zero file-count slowdowns are disabled; the delay-rate setting
+is 1 GiB/s. The bounded memtables still apply backpressure when RAM is full.
+Construction skips Bloom filters because finalization only performs range scans.
+A shared index cache is configured for finalization across all workers.
+`native_ingest_MiB_per_second` reports completed native WriteBatch bytes over
+the recent progress window, before SST compression; it is not physical disk bandwidth.
+
+Finalization streams that order without an external sort or a
 cardinality-sized Java array. It verifies strict order, distance/orbit metadata
 and aggregate counts, flushes the archive and digest, and publishes atomically.
 Only the archive and manifest survive publication by default.

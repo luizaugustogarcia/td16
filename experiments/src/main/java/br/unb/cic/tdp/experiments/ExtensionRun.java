@@ -114,12 +114,13 @@ final class ExtensionRun {
             java.util.ArrayDeque<long[]> rateSamples=new java.util.ArrayDeque<>();
             logger.scheduleAtFixedRate(()->{
                 long now=System.nanoTime(),settled=stats.rejected.get()+stats.determined.get()+resolver.cpuQueries.get()+resolver.gpuQueries.get();
-                rateSamples.addLast(new long[]{now,settled});if(rateSamples.size()>31)rateSamples.removeFirst();
+                rateSamples.addLast(new long[]{now,settled,writer.nativeWriteBytes()});if(rateSamples.size()>31)rateSamples.removeFirst();
                 long[] previous=rateSamples.getFirst();double rate=now==previous[0]?0:(settled-previous[1])*60e9/(now-previous[0]);
+                double ingestRate=now==previous[0]?0:(writer.nativeWriteBytes()-previous[2])*1e9/(now-previous[0])/(1L<<20);
                 System.out.printf(java.util.Locale.ROOT,
-                "EXTENSION_PROGRESS n=%d parents=%d generated=%d canonical=%d deletion_rejected=%d determined=%d CPU_queries=%d GPU_queries=%d written=%d queued_buffers=%d queued_bytes_estimate=%d write_queue_capacity=%d write_queue_wait_seconds=%.3f aggregate_bytes=%d aggregate_target_bytes=%d aggregate_flushes=%d native_write_calls=%d settled=%d settled_per_minute=%.0f elapsed=%.1fs GPU_device_queries=%s%n",
+                "EXTENSION_PROGRESS n=%d parents=%d generated=%d canonical=%d deletion_rejected=%d determined=%d CPU_queries=%d GPU_queries=%d written=%d queued_buffers=%d queued_bytes_estimate=%d write_queue_capacity=%d write_queue_wait_seconds=%.3f aggregate_bytes=%d aggregate_target_bytes=%d aggregate_flushes=%d native_write_calls=%d native_write_bytes=%d native_ingest_MiB_per_second=%.1f settled=%d settled_per_minute=%.0f elapsed=%.1fs GPU_device_queries=%s%n",
                 n,stats.parents.get(),stats.generated.get(),stats.canonical.get(),stats.rejected.get(),stats.determined.get(),
-                resolver.cpuQueries.get(),resolver.gpuQueries.get(),writer.writtenRecords(),writer.queuedBatches(),writer.queuedBytesEstimate(),writer.pendingCapacity(),writer.enqueueWaitSeconds(),writer.aggregateBytes(),writer.aggregateTargetBytes(),writer.aggregateFlushes(),writer.nativeWrites(),settled,rate,(now-started)/1e9,resolver.deviceQueries());
+                resolver.cpuQueries.get(),resolver.gpuQueries.get(),writer.writtenRecords(),writer.queuedBatches(),writer.queuedBytesEstimate(),writer.pendingCapacity(),writer.enqueueWaitSeconds(),writer.aggregateBytes(),writer.aggregateTargetBytes(),writer.aggregateFlushes(),writer.nativeWrites(),writer.nativeWriteBytes(),ingestRate,settled,rate,(now-started)/1e9,resolver.deviceQueries());
             },2,2,TimeUnit.SECONDS);
             ThreadLocal<Worker> local=ThreadLocal.withInitial(()->new Worker(n,floor,Math.max(0,floor-1),parents,writer,resolver,tables,stats));
             int outstanding=0;

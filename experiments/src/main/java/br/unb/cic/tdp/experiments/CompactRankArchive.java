@@ -108,7 +108,8 @@ final class CompactRankArchive implements AutoCloseable {
         int threads=buildThreads(layout.count);long began=System.nanoTime();Path temporary=Files.createTempFile(directory,".compact-",".partial");
         try {
             try(FileChannel file=FileChannel.open(temporary,StandardOpenOption.READ,StandardOpenOption.WRITE);
-                org.rocksdb.Options options=new org.rocksdb.Options();
+                org.rocksdb.Cache cache=new org.rocksdb.LRUCache(RocksTuning.cacheBytes());
+                org.rocksdb.Options options=RocksTuning.archiveReadOptions(cache);
                 org.rocksdb.RocksDB database=org.rocksdb.RocksDB.openReadOnly(options,directory.resolve("db").toString());
                 BuildProgress progress=new BuildProgress(manifest,threads)) {
                 resize(file,layout.bytes);progress.phase("encode","records",layout.count);
