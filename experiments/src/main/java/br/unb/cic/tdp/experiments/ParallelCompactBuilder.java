@@ -21,8 +21,9 @@ final class ParallelCompactBuilder {
         ExecutorService workers=Executors.newFixedThreadPool(threads,Thread.ofPlatform().name("compact-build-n"+manifest.degree+"-",0).factory());
         try {
             List<Range> ranges=ranges(database,manifest.degree,layout,threads);
+            long readahead=RocksTuning.archiveScanReadahead(database,threads);
             List<Callable<Shard>> scans=new ArrayList<>();
-            for(int i=0;i<ranges.size();i++){int index=i;Range range=ranges.get(i);scans.add(()->encode(work,index,range,database,manifest,layout,progress));}
+            for(int i=0;i<ranges.size();i++){int index=i;Range range=ranges.get(i);scans.add(()->encode(work,index,range,database,manifest,layout,readahead,progress));}
             List<Shard> shards=execute(workers,scans);
             long count=0,bytes=0;long[] canonical=new long[12],weighted=new long[12];
             for(Shard shard:shards) {
@@ -94,13 +95,13 @@ final class ParallelCompactBuilder {
         byte[] key=new byte[PermutationRank.bytes(degree)];for(int i=key.length-1;i>=0;i--){key[i]=(byte)rank;rank>>>=8;}return key;
     }
     private static Shard encode(Path work,int index,Range range,RocksDB database,LayerManifest manifest,
-                                CompactRankArchive.Layout layout,CompactRankArchive.BuildProgress progress) throws IOException,RocksDBException {
+                                CompactRankArchive.Layout layout,long readahead,CompactRankArchive.BuildProgress progress) throws IOException,RocksDBException {
         byte[] lower=key(range.firstBucket<<layout.lowBits(),manifest.degree);
         byte[] upper=key(Math.min(layout.universe(),range.endBucket<<layout.lowBits()),manifest.degree);
         long[] canonical=new long[12],weighted=new long[12];long count=0,previous=-1;
         Path lows=work.resolve(index+"-low.bin"),highs=work.resolve(index+"-high.bin"),labels=work.resolve(index+"-labels.bin");
         try(Slice bound=new Slice(upper);
-            ReadOptions reads=new ReadOptions().setIterateUpperBound(bound).setFillCache(false).setReadaheadSize(4L<<20);
+            ReadOptions reads=new ReadOptions().setIterateUpperBound(bound).setFillCache(false).setReadaheadSize(readahead);
             RocksIterator iterator=database.newIterator(reads)) {
             iterator.seek(lower);
             if(!iterator.isValid()){iterator.status();return new Shard(range,0,canonical,weighted,lows,highs,labels);}

@@ -37,6 +37,14 @@ final class RocksTuning {
         .setCompressionType(CompressionType.LZ4_COMPRESSION).setMaxOpenFiles(maxOpenFiles()).setBytesPerSync(4L<<20)
         .setTableFormatConfig(table(cache));}
     static Options archiveReadOptions(Cache cache){return new Options().setMaxOpenFiles(maxOpenFiles()).setTableFormatConfig(table(cache));}
+    static long archiveScanReadahead(RocksDB database,int workers){
+        // Each range iterator merges all overlapping runs. Budget two native
+        // prefetch buffers per run instead of multiplying 4 MiB by that fan-in.
+        long runs=Math.max(1,database.getLiveFilesMetaData().size()),streams=2L*workers*runs;
+        long bytes=Math.max(4096,Math.min(4L<<20,cacheBytes()/4/streams)&~4095L);
+        System.out.printf("COMPACT_READ runs=%d workers=%d readahead_bytes_per_run=%d shared_index_cache_bytes=%d%n",runs,workers,bytes,cacheBytes());
+        return bytes;
+    }
     static void log(){System.out.printf("ROCKSDB phase=construction write_threads=%d background_jobs=%d flush_threads=%d subcompactions=%d memtable_MiB=%d max_memtables=%d SST_target_MiB=%d cache_MiB=%d max_open_files=%d WAL=false compression=LZ4 auto_compaction=false pending_compaction_limits=disabled L0_write_limits=disabled delayed_write_MiB_per_second=1024 final_merge=parallel-rank-ranges index=two-level Bloom_filters=false metadata_block_KiB=4%n",
         writeThreads(),backgroundJobs(),flushThreads(),subcompactions(),memtableBytes()>>20,maxMemtables(),sstBytes()>>20,cacheBytes()>>20,maxOpenFiles());}
 }

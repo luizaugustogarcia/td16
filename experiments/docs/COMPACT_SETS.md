@@ -61,6 +61,8 @@ limits and level-zero file-count slowdowns are disabled; the delay-rate setting
 is 1 GiB/s. The bounded memtables still apply backpressure when RAM is full.
 Construction skips Bloom filters because finalization only performs range scans.
 A shared index cache is configured for finalization across all workers.
+Per-run readahead scales with the number of SST files and workers so the
+parallel merge does not multiply large native read buffers by every input run.
 `native_ingest_MiB_per_second` reports completed native WriteBatch bytes over
 the recent progress window, before SST compression; it is not physical disk bandwidth.
 

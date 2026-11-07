@@ -131,7 +131,7 @@ final class CompactRankArchive implements AutoCloseable {
     private static void buildSequential(FileChannel file,org.rocksdb.RocksDB database,LayerManifest manifest,Layout layout,BuildProgress progress) throws IOException,org.rocksdb.RocksDBException {
         long[] counts=new long[12],weights=new long[12];long loaded=0,previous=-1;
         byte[] key=new byte[PermutationRank.bytes(manifest.degree)],value=new byte[2];
-        try(org.rocksdb.ReadOptions reads=new org.rocksdb.ReadOptions().setFillCache(false).setReadaheadSize(4L<<20);
+        try(org.rocksdb.ReadOptions reads=new org.rocksdb.ReadOptions().setFillCache(false).setReadaheadSize(RocksTuning.archiveScanReadahead(database,1));
             org.rocksdb.RocksIterator iterator=database.newIterator(reads)) {
             Encoder encoder=new Encoder(file,layout);
             for(iterator.seekToFirst();iterator.isValid();iterator.next()) {
