@@ -502,8 +502,8 @@ assembly, index construction and checksum progress. Temporary encoded streams
 use bounded buffers and are removed after assembly.
 
 
-The [RTX 5090 profile](scripts/servers/rtx5090.sh) defaults to a fresh-format
-degree-1-through-9 computation. It detects all CPU threads, uses two generation
+The [RTX 5090 profile](scripts/servers/rtx5090.sh) defaults to the full TD(18)
+search. It detects all CPU threads, uses two generation
 streams and 16 search slots, and selects a 128 GiB heap with 32 GiB persistence
 staging. [rtx5090-build.sh](scripts/servers/rtx5090-build.sh) builds native
 Blackwell PTX with CUDA 12.8+ within the driver's supported version. Set

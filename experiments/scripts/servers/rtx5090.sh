@@ -19,8 +19,8 @@ if [[ ! $task_cpus =~ ^[1-9][0-9]*$ ]]; then
 fi
 task_background=$((task_cpus / 2)); if ((task_background < 2)); then task_background=2; fi
 task_flush=$((task_background / 4)); if ((task_flush < 1)); then task_flush=1; fi
-task_command=(bash "$task_repo/experiments/run.sh" count --no-build
-  --data-dir "$task_data" --max-n 9 --pattern-horizon 8
+task_command=(bash "$task_repo/experiments/run.sh" diameter --no-build
+  --data-dir "$task_data" --max-n 18 --pattern-horizon 17
   --cpu-threads "$task_cpus" --batch-records 65536
   --write-buffer-mib 32768 --write-aggregate-mib 4096
   --write-native-batch-mib 8 --write-flush-ms 2000
