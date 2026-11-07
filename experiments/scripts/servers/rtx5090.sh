@@ -8,6 +8,13 @@ task_build_root=${TDP_EXPERIMENT_BUILD_ROOT:-${TMPDIR:-/tmp}/td16-rtx5090-build}
 task_cpus=${TDP_CPU_THREADS:-$(nproc)}
 task_logs=${TDP_LOG_DIR:-$task_repo/experiments/logs}
 task_data=${TDP_DATA_DIR:?Set TDP_DATA_DIR to a directory on the attached 256 GB volume}
+task_write_mib=${TDP_WRITE_BUFFER_MIB:-32768}
+task_aggregate_mib=${TDP_WRITE_AGGREGATE_MIB:-4096}
+task_native_mib=${TDP_WRITE_NATIVE_BATCH_MIB:-8}
+task_write_flush_ms=${TDP_WRITE_FLUSH_MS:-2000}
+task_memtable_mib=${TDP_ROCKS_MEMTABLE_MIB:-1024}
+task_sst_mib=${TDP_ROCKS_SST_MIB:-1024}
+task_parent_batch=${TDP_GPU_PARENT_BATCH:-4096}
 task_dry_run=false
 task_extra=()
 for task_argument in "$@"; do
@@ -22,20 +29,20 @@ task_flush=$((task_background / 4)); if ((task_flush < 1)); then task_flush=1; f
 task_command=(bash "$task_repo/experiments/run.sh" diameter --no-build
   --data-dir "$task_data" --max-n 18 --pattern-horizon 17
   --cpu-threads "$task_cpus" --batch-records 65536
-  --write-buffer-mib 32768 --write-aggregate-mib 4096
-  --write-native-batch-mib 8 --write-flush-ms 2000
+  --write-buffer-mib "$task_write_mib" --write-aggregate-mib "$task_aggregate_mib"
+  --write-native-batch-mib "$task_native_mib" --write-flush-ms "$task_write_flush_ms"
   --rocks-write-threads "$task_cpus" --rocks-background-jobs "$task_background"
   --rocks-flush-threads "$task_flush" --rocks-subcompactions "$task_background"
-  --rocks-memtable-mib 1024 --rocks-max-memtables 12
-  --rocks-sst-mib 1024 --rocks-cache-mib 8192 --rocks-max-open-files -1
+  --rocks-memtable-mib "$task_memtable_mib" --rocks-max-memtables 12
+  --rocks-sst-mib "$task_sst_mib" --rocks-cache-mib 8192 --rocks-max-open-files -1
   --gpu-devices 0 --gpu-slots 16 --gpu-generation-streams 2 --gpu-slot-mib 0 --vram-fraction 0.95
-  --gpu-batch-records 524288 --gpu-queue 256 --gpu-parent-batch 4096
+  --gpu-batch-records 524288 --gpu-queue 256 --gpu-parent-batch "$task_parent_batch"
   --gpu-producer-batch 8192 --gpu-min-batch-records 32768
   --gpu-quantum 16384 --lookup-chunk 1048576
   --cuda-ptx-dir "$task_build_root/experiments/native"
   --log-file "$task_logs/extension.log" "${task_extra[@]}")
 if [[ $task_dry_run == true ]]; then
-  printf 'CPU_THREADS=%s GPU_SLOTS=16 GPU_GENERATION_STREAMS=2 HEAP_GiB=128 WRITE_STAGING_GiB=32\n' "$task_cpus"
+  printf 'CPU_THREADS=%s GPU_SLOTS=16 GPU_GENERATION_STREAMS=2 HEAP_GiB=128 WRITE_STAGING_MiB=%s\n' "$task_cpus" "$task_write_mib"
   printf 'ROCKS_BACKGROUND=%s ROCKS_FLUSH=%s ROCKS_SUBCOMPACTIONS=%s\n' "$task_background" "$task_flush" "$task_background"
   printf 'BUILD_ROOT=%s\nDATA_DIR=%s\nLOG_DIR=%s\n' "$task_build_root" "$task_data" "$task_logs"
   printf 'COMMAND'; printf ' %q' "${task_command[@]}"; printf '\n'
@@ -60,7 +67,7 @@ if ! flock -n 9; then printf 'A run already owns %s.\n' "$task_data" >&2; exit 1
 export TDP_EXPERIMENT_BUILD_ROOT="$task_build_root"
 export JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS:-"-Xms8g -Xmx128g -XX:ActiveProcessorCount=$task_cpus -XX:+UseG1GC -XX:+UseNUMA -XX:+ExitOnOutOfMemoryError -Xlog:gc:file=\"$task_logs/gc.log\":time,uptime,level,tags:filecount=5,filesize=32M"}
 # Use JVM-selected GC concurrency; CPU and archive concurrency follow the detected allocation.
-# 4,096 parents bound worst-case degree-18 host fallback packets while filling many SMs.
+# Parent batches bound transient host fallback packets while filling many SMs.
 {
   date -u '+START_UTC=%Y-%m-%dT%H:%M:%SZ'
   printf 'CPU_THREADS=%s\nDATA_DIR=%s\nBUILD_ROOT=%s\n' "$task_cpus" "$task_data" "$task_build_root"

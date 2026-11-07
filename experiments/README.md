@@ -510,6 +510,15 @@ Blackwell PTX with CUDA 12.8+ within the driver's supported version. Set
 `TDP_DATA_DIR` and optionally `TDP_LOG_DIR` to the attached volume. The detached
 launcher accepts this profile and `--resume` to reuse completed layers.
 
+The [EPYC RTX 5090 profile](scripts/servers/rtx5090-epyc.sh) detects all 256
+logical CPUs, with 256 writers, 128 background jobs and 32 flush workers. The
+faster NVMe profile uses 48 GiB staging, an 8 GiB aggregate, 16 MiB native
+batches and 2 GiB memtables/SST targets. Parent packets are halved to 2,048
+records because RAM stays at 256 GB. Its
+[build script](scripts/servers/rtx5090-epyc-build.sh) and detached launcher use
+the attached /workspace volume automatically. Both profiles run the full TD(18)
+search with two generation streams and 16 GPU search slots.
+
 The [quad RTX 3090 profile](scripts/servers/quad-3090.sh) targets four 24 GiB GPUs,
 184 CPUs of quota and approximately 242 GiB RAM. It selects eight slots per
 device, 2,097,152-record maximum search batches, 184 host workers, 96 write

@@ -17,6 +17,14 @@ class WriteBufferSizingTest {
             assertTrue(plan.estimatedMaximumBytes()<=(32L<<30));
         }
     }
+    @Test void epycRtx5090ProfileAccountsFor256WritersAndLargerNativeBatches() {
+        for(int degree=1;degree<=18;degree++) {
+            WriteAggregation aggregation=WriteAggregation.of(degree,8L<<30,1000,16L<<20);
+            WriteBufferSizing plan=WriteBufferSizing.calculate(degree,65536,8,256,304,48L<<30,aggregation);
+            assertEquals(512,plan.inFlightBatches());assertTrue(plan.pendingBatches()>256);
+            assertTrue(plan.estimatedMaximumBytes()<=(48L<<30));
+        }
+    }
     @Test void serverMemoryBudgetSupportsMuchMoreThan256BatchesWithoutAnUnboundedRecyclePool() {
         long budget=8L<<30;
         WriteBufferSizing plan=WriteBufferSizing.calculate(14,32768,128,64,128,budget);

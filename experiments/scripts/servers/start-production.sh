@@ -6,14 +6,21 @@ task_profile=${1:-quad-3090.sh}
 if [[ $# -gt 0 ]]; then shift; fi
 task_resume=false
 if [[ ${1:-} == --resume ]]; then task_resume=true; shift; fi
-task_default_build=td16-isolated-build
+task_default_build_root=${TMPDIR:-/tmp}/td16-isolated-build
+task_default_data=$task_repo/experiments/data/search
+task_default_logs=$task_repo/experiments/logs
 if [[ $task_profile == rtx5090.sh ]]; then
   : "${TDP_DATA_DIR:?Set TDP_DATA_DIR to a directory on the attached 256 GB volume}"
-  task_default_build=td16-rtx5090-build
+  task_default_build_root=${TMPDIR:-/tmp}/td16-rtx5090-build
 fi
-task_build_root=${TDP_EXPERIMENT_BUILD_ROOT:-${TMPDIR:-/tmp}/$task_default_build}
-task_data=${TDP_DATA_DIR:-$task_repo/experiments/data/search}
-task_logs=${TDP_LOG_DIR:-$task_repo/experiments/logs}
+if [[ $task_profile == rtx5090-epyc.sh ]]; then
+  task_default_build_root=/workspace/td16-build/rtx5090-epyc
+  task_default_data=/workspace/td16-data/rtx5090-epyc
+  task_default_logs=/workspace/td16-logs/rtx5090-epyc
+fi
+task_build_root=${TDP_EXPERIMENT_BUILD_ROOT:-$task_default_build_root}
+task_data=${TDP_DATA_DIR:-$task_default_data}
+task_logs=${TDP_LOG_DIR:-$task_default_logs}
 export TDP_EXPERIMENT_BUILD_ROOT="$task_build_root" TDP_DATA_DIR="$task_data" TDP_LOG_DIR="$task_logs"
 task_profile="$task_repo/experiments/scripts/servers/$task_profile"
 test -f "$task_profile"
