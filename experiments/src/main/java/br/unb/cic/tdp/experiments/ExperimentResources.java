@@ -4,11 +4,14 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import jcuda.nvrtc.*;
 import static jcuda.nvrtc.JNvrtc.*;
 
 final class ExperimentResources {
     interface Source {String get() throws IOException;}
+    private record Compilation(String name,String architecture,String source,List<String> definitions){}
+    private static final Map<Compilation,String> PTX=new ConcurrentHashMap<>();
     static String ptx(String name,String architecture,Source source,String... definitions) throws IOException {
         String directory=System.getProperty("extension.cudaPtxDir");
         if(directory!=null) {
@@ -17,10 +20,14 @@ final class ExperimentResources {
             System.out.printf("CUDA_MODULE backend=CMake kernel=%s file=%s%n",name,file);
             return Files.readString(file);
         }
+        Compilation compilation=new Compilation(name,architecture,source.get(),List.of(definitions));
+        return PTX.computeIfAbsent(compilation,ExperimentResources::compile);
+    }
+    private static String compile(Compilation compilation) {
         JNvrtc.setExceptionsEnabled(true);nvrtcProgram program=new nvrtcProgram();
-        nvrtcCreateProgram(program,source.get(),name+".cu",0,null,null);
+        nvrtcCreateProgram(program,compilation.source,compilation.name+".cu",0,null,null);
         try {
-            List<String> options=new ArrayList<>(List.of(architecture,"--std=c++11","--generate-line-info"));options.addAll(Arrays.asList(definitions));
+            List<String> options=new ArrayList<>(List.of(compilation.architecture,"--std=c++11","--generate-line-info"));options.addAll(compilation.definitions);
             try{nvrtcCompileProgram(program,options.size(),options.toArray(String[]::new));}
             catch(RuntimeException error){String[] log={null};nvrtcGetProgramLog(program,log);throw new IllegalStateException(log[0],error);}
             String[] ptx={null};nvrtcGetPTX(program,ptx);return ptx[0];

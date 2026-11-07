@@ -4,22 +4,28 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 
-/** One exclusive generation stream per selected GPU, shared by the bounded host pipeline. */
+/** Independently leased generation streams per GPU, shared by the bounded host pipeline. */
 final class GpuCandidatePool implements AutoCloseable {
     final List<GpuCandidateGenerator> generators=new ArrayList<>();
     private final ArrayBlockingQueue<GpuCandidateGenerator> available;
     private boolean closed;
     private int producers;
     GpuCandidatePool(ExtensionResolver resolver,CanonicalLayerStore parents,int n,int floor,int capacity) {
-        available=new ArrayBlockingQueue<>(resolver.deviceCount(),true);
+        int streams=GpuSettings.generationStreams();
+        available=new ArrayBlockingQueue<>(Math.multiplyExact(resolver.deviceCount(),streams),true);
         try {
             for(int index=0;index<resolver.deviceCount();index++) {
-                GpuCandidateGenerator generator=new GpuCandidateGenerator(resolver,parents,n,floor,capacity,index);
-                generators.add(generator);available.add(generator);
+                for(int stream=0;stream<streams;stream++) {
+                    GpuCandidateGenerator generator=new GpuCandidateGenerator(resolver,parents,n,floor,capacity,index);
+                    generators.add(generator);available.add(generator);
+                }
             }
         }catch(RuntimeException|Error error){try{close();}catch(Throwable cleanup){error.addSuppressed(cleanup);}throw error;}
     }
     void process(byte[] input,ExtensionRun.Stats stats,AsyncCanonicalWriter writer,ExtensionResolver resolver) throws IOException {
+        process(input,stats,writer,resolver,false);
+    }
+    void process(byte[] input,ExtensionRun.Stats stats,AsyncCanonicalWriter writer,ExtensionResolver resolver,boolean rankRows) throws IOException {
         if(writer.hasMatch())return;
         GpuCandidateGenerator generator;
         try {
@@ -31,7 +37,7 @@ final class GpuCandidatePool implements AutoCloseable {
             }
         }catch(InterruptedException error){Thread.currentThread().interrupt();throw new IOException("Interrupted waiting for a GPU generation stream",error);}
         GpuCandidateGenerator.Output packet;
-        try {packet=generator.produce(input,stats,resolver);}
+        try {packet=generator.produce(input,stats,resolver,rankRows);}
         finally {
             synchronized(this){if(!closed)available.add(generator);producers--;notifyAll();}
         }

@@ -14,4 +14,15 @@
         <junit.version>5.10.2</junit.version>
         <lombok.version>1.18.42</lombok.version>
     </properties>
+    <profiles>
+        <profile>
+            <id>isolated-build</id>
+            <properties>
+                <tdp.isolatedBuildRoot>${java.io.tmpdir}/td16-isolated-build</tdp.isolatedBuildRoot>
+            </properties>
+            <build>
+                <directory>${tdp.isolatedBuildRoot}/${project.artifactId}</directory>
+            </build>
+        </profile>
+    </profiles>
 </project>

@@ -7,7 +7,6 @@ import java.util.concurrent.*;
 import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.rocksdb.RocksIterator;
 import static org.junit.jupiter.api.Assertions.*;
 
 class WriteAggregationTest {
@@ -51,15 +50,9 @@ class WriteAggregationTest {
             assertEquals(0,writer.queuedBatches());assertEquals(0,writer.queuedBytesEstimate());
         }
         try(CanonicalLayerStore store=new CanonicalLayerStore(target)) {
-            for(int row=0;row<keys.size();row++)assertEquals(distances.get(row).intValue(),store.database.get(keys.get(row))[0]);
-            int count=0;
-            try(RocksIterator iterator=store.database.newIterator()) {
-                for(iterator.seekToFirst();iterator.isValid();iterator.next()) {
-                    assertEquals(PackedPermutation5.bytes(n+1),iterator.key().length);assertEquals(1,iterator.value().length);
-                    assertEquals(0,iterator.value()[0]&0xf0);count++;
-                }
-                iterator.status();
-            }
+            for(int row=0;row<keys.size();row++)assertEquals(distances.get(row).intValue(),store.compact.distance(PermutationRank.ofPackedOmega(keys.get(row),0,n)));
+            int count=0;var ranks=store.compact.ranks();long previous=-1,rank;
+            while((rank=ranks.next())>=0){assertTrue(rank>previous);previous=rank;assertTrue(store.compact.distanceAt(count)>=0);count++;}
             assertEquals(keys.size(),count);
         }
     }

@@ -10,36 +10,45 @@ import static org.junit.jupiter.api.Assertions.*;
 @EnabledIfSystemProperty(named="gpuTests",matches="true")
 class GpuExtensionTest {
     @TempDir Path root;
+    @Test void persistsEveryRequiredLayerThroughNineOnGpu() throws Exception {
+        persistsEveryRequiredLayerOnGpu(9);
+    }
+    @EnabledIfSystemProperty(named="gpuExtendedTests",matches="true")
     @Test void persistsEveryRequiredLayerThroughElevenOnGpu() throws Exception {
+        persistsEveryRequiredLayerOnGpu(11);
+    }
+    private void persistsEveryRequiredLayerOnGpu(int through) throws Exception {
         int threads=Math.min(8,Runtime.getRuntime().availableProcessors());
         GpuSettingsTest.configured(Map.ofEntries(
             Map.entry("extension.gpuDevices","0"),Map.entry("extension.gpuSlots","4"),
             Map.entry("extension.gpuPatternMaxDegree","auto"),Map.entry("extension.gpuMembershipDegree","auto"),
             Map.entry("extension.gpuParentBatch","512"),Map.entry("extension.gpuQuantum","4096"),
             Map.entry("extension.verifyGpuPatterns","true"),Map.entry("extension.forceDiskLookups","false"),
-            Map.entry("extension.through","11"),Map.entry("extension.diameterOnly","false"),
+            Map.entry("extension.through",Integer.toString(through)),Map.entry("extension.diameterOnly","false"),
             Map.entry("benchmark.patternHorizon","0"),Map.entry("count.cpuThreads",Integer.toString(threads)),
             Map.entry("rocks.writeThreads","4"),Map.entry("rocks.backgroundJobs","2"),Map.entry("rocks.flushThreads","2"),
             Map.entry("rocks.memtableMiB","64"),Map.entry("rocks.sstMiB","64"),Map.entry("rocks.cacheMiB","64")),()->{
             try(var files=Files.list(root)){assertEquals(0,files.count(),"Start without precomputed sets");}
-            ExtensionConfig config=new ExtensionConfig(root,11,threads,0,4096,8,32768,16,true,0.50);
+            ExtensionConfig config=new ExtensionConfig(root,through,threads,0,4096,8,32768,16,true,0.50);
             // One uninterrupted GPU run from the seed, including lazy support backfills.
             // GPU mode rejects CPU sorting internally; baseDegree=0 supplies no BFS oracle.
             ExtensionRun.run(config);
             long[] counts={0,1,1,1,1,31,45,1513,2836,114327,255053,12537954};
             int[] diameters={0,0,1,2,3,3,4,4,5,5,6,6};
             LayerCatalog catalog=new LayerCatalog(root);
-            for(int n=1;n<=11;n++) {
+            for(int n=1;n<=through;n++) {
                 Path path=catalog.find(n,diameters[n]);assertNotNull(path,"Missing D("+n+")");
                 LayerManifest manifest=LayerManifest.read(path);
-                assertTrue(manifest.exact);assertEquals(n,manifest.degree);assertEquals(11,manifest.horizon);
+                assertTrue(manifest.exact);assertEquals(n,manifest.degree);assertEquals(through,manifest.horizon);
+                assertTrue(Files.isRegularFile(path.resolve(CompactRankArchive.FILE)),"Missing compact D("+n+")");
+                assertFalse(Files.exists(path.resolve("db")),"Completed layers retain only the compact archive");
                 assertEquals(diameters[n],manifest.floor);assertEquals(counts[n],manifest.weighted[diameters[n]],"|D("+n+")|");
             }
             // Independent exhaustive membership checks remain feasible through degree 9.
-            ExtensionRunTest.verify(root,9);
+            ExtensionRunTest.verify(root,Math.min(9,through));
             // Reopen every degree-10/11 result and support set, and reconstruct its
             // ordinary count from the stored permutations rather than trusting metadata.
-            for(int n=10;n<=11;n++)for(int distance=0;distance<=diameters[n];distance++) {
+            for(int n=10;n<=through;n++)for(int distance=0;distance<=diameters[n];distance++) {
                 if(!catalog.has(n,distance))continue;
                 try(CanonicalLayerStore store=catalog.open(n,distance,distance);
                     CanonicalLayerStore.BatchCursor cursor=store.cursor(distance)) {

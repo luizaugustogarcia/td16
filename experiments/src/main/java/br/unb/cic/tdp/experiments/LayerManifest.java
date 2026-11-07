@@ -6,8 +6,8 @@ import java.util.Properties;
 
 /** Published only after the asynchronous writer has drained and flushed. */
 final class LayerManifest {
-    static final String ENCODING="omega-images-5bit-msb-fixed-sigma-v1";
-    static final String STORAGE="omega-key-distance-nibble-v2",LEGACY_STORAGE="distance-key-orbit-weight-v1";
+    static final String ENCODING="canonical-beta-rank-fixed-sigma-v1";
+    static final String STORAGE="canonical-rank-archive-v1";
     final String storage;
     final boolean exact;
     final int degree,floor,maxDistance,horizon;
@@ -28,8 +28,7 @@ final class LayerManifest {
         if(exact)for(int d=0;d<weighted.length;d++)if(d!=floor&&weighted[d]!=0)throw new IllegalArgumentException("Exact store contains another distance");
         maxDistance=exact?floor:maximum;
     }
-    boolean legacy(){return LEGACY_STORAGE.equals(storage);}
-    long canonicalSize(){long n=0;for(long x:canonical)n+=x;return n;}
+    long canonicalSize(){long n=0;for(long x:canonical)n=Math.addExact(n,x);return n;}
     void write(Path directory) throws IOException {
         Properties p=new Properties();
         p.setProperty("complete","true");p.setProperty("encoding",ENCODING);
@@ -45,8 +44,8 @@ final class LayerManifest {
         Properties p=new Properties();
         try(InputStream in=Files.newInputStream(directory.resolve("manifest.properties"))){p.load(in);}
         if(!"true".equals(p.getProperty("complete"))||!ENCODING.equals(p.getProperty("encoding")))throw new IOException("Incomplete or incompatible layer store: "+directory);
-        String storage=p.getProperty("storage",LEGACY_STORAGE);
-        if(!STORAGE.equals(storage)&&!LEGACY_STORAGE.equals(storage))throw new IOException("Unsupported key/value format: "+storage);
+        String storage=p.getProperty("storage");
+        if(!STORAGE.equals(storage))throw new IOException("Unsupported key/value format: "+storage+"; start a fresh compact run");
         try {
             int degree=Integer.parseInt(p.getProperty("degree")),floor=Integer.parseInt(p.getProperty("floor"));
             if(degree<1||degree>18||floor<0||floor>11||Integer.parseInt(p.getProperty("symbols"))!=degree+1)throw new IOException("Invalid layer header");

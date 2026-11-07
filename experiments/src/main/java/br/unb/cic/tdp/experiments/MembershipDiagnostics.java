@@ -26,9 +26,8 @@ final class MembershipDiagnostics {
             }
             GpuCandidateGenerator.Output packet=generator.produce(rows,new ExtensionRun.Stats(),resolver);
             if(packet!=null)for(int j=0;j<packet.count();j++)for(int i=0;i<jobs;i++) {
-                int offset=j*generator.outBytes;boolean same=true;for(int b=0;b<width;b++)if(keys[i*width+b]!=packet.packed()[offset+9+b])same=false;
-                if(same) {
-                    long rank=0;for(int b=0;b<8;b++)rank|=(long)(packet.packed()[offset+b]&255)<<(8*b);
+                int offset=j*generator.outBytes;long rank=0;for(int b=0;b<8;b++)rank|=(long)(packet.packed()[offset+b]&255)<<(8*b);
+                if(rank==PermutationRank.ofPackedOmega(keys,i*width,n)) {
                     System.out.printf("SAMPLE_GENERATION key=%s metadata=%d rank=%d%n",java.util.HexFormat.of().formatHex(keys,i*width,(i+1)*width),packet.packed()[offset+8]&255,rank);
                 }
             }

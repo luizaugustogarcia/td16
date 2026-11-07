@@ -25,9 +25,12 @@ class MultiGpuTest {
     @Test void generationAndSortingAreCorrectAcrossIndependentContexts() throws Exception {
         GpuSettingsTest.configured(Map.of("extension.gpuDevices","0,1","extension.gpuSlots","2","extension.gpuSlotMiB","1"),()->runPipeline(false,new Contexts()));
     }
+    @Test void multipleGenerationStreamsPerContextPreserveEveryDecisionAndReleaseTheirLeases() throws Exception {
+        GpuSettingsTest.configured(Map.of("extension.gpuDevices","0,1","extension.gpuSlots","2","extension.gpuSlotMiB","1","extension.gpuGenerationStreams","2"),()->runPipeline(false,new Contexts()));
+    }
     @Test void firstMatchStopsAllContextsWithoutPublishingAnIncompleteSet() throws Exception {
         assertTimeoutPreemptively(java.time.Duration.ofSeconds(40),()->
-            GpuSettingsTest.configured(Map.of("extension.gpuDevices","0,1","extension.gpuSlots","2","extension.gpuSlotMiB","1"),()->runPipeline(true,new Contexts())));
+            GpuSettingsTest.configured(Map.of("extension.gpuDevices","0,1","extension.gpuSlots","2","extension.gpuSlotMiB","1","extension.gpuGenerationStreams","2"),()->runPipeline(true,new Contexts())));
     }
     private void runPipeline(boolean decision,ExtensionResolver.DeviceFactory factory) throws Exception {
         int n=decision?6:7;Path source=root.resolve("source"),output=root.resolve("output");

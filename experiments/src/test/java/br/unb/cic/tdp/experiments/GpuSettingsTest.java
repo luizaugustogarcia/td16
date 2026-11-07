@@ -36,9 +36,17 @@ class GpuSettingsTest {
     }
     @Test void rejectsInvalidSlotsDevicesAndMemory() throws Exception {
         configured(Map.of("extension.gpuDevices","0,0"),()->assertThrows(IllegalArgumentException.class,GpuSettings::system));
-        configured(Map.of("extension.gpuSlots","33"),()->assertThrows(IllegalArgumentException.class,GpuSettings::system));
+        configured(Map.of("extension.gpuSlots","0"),()->assertThrows(IllegalArgumentException.class,GpuSettings::system));
         configured(Map.of("extension.gpuSlotMiB","-1"),()->assertThrows(IllegalArgumentException.class,GpuSettings::system));
         configured(Map.of("extension.gpuSlotMiB",Long.toString(Long.MAX_VALUE)),()->assertThrows(IllegalArgumentException.class,GpuSettings::system));
+    }
+    @Test void manyGpuStreamsRespectMemoryBudgetsWithoutAnArbitrarySlotCeiling() throws Exception {
+        configured(Map.of("extension.gpuDevices","0","extension.gpuSlots","128"),()->{
+            GpuSettings settings=GpuSettings.system();assertEquals(128,settings.layout().totalSlots());
+            assertEquals((long)((32L<<30)*0.95)/128,settings.slotBudget(33L<<30,1L<<30,0.95));
+        });
+        configured(Map.of("extension.gpuGenerationStreams","64"),()->assertEquals(64,GpuSettings.generationStreams()));
+        configured(Map.of("extension.gpuGenerationStreams","0"),()->assertThrows(IllegalArgumentException.class,GpuSettings::generationStreams));
     }
     @Test void searchAndGeneratorBudgetCalculationsIncludeDeviceBuffers() {
         long one=GpuStreamingCounter.bytesPerJob(18,11),fixed=GpuStreamingCounter.fixedBatchBytes(18);

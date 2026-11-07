@@ -1,6 +1,9 @@
 typedef unsigned char Byte;
 typedef unsigned long long Word;
 __device__ __constant__ int pattern_offset_bytes=sizeof(Word);
+__device__ __constant__ Word compact_rank_layout_version=1ULL;
+__device__ Word rank_word(const Byte* p,int n);
+__device__ Word canonical_rank_of_word(const Byte* word,int n);
 __device__ __constant__ Word factorial[19]={1ULL,1ULL,2ULL,6ULL,24ULL,120ULL,720ULL,5040ULL,40320ULL,362880ULL,3628800ULL,39916800ULL,479001600ULL,6227020800ULL,87178291200ULL,1307674368000ULL,20922789888000ULL,355687428096000ULL,6402373705728000ULL};
 // Proven diameter upper bounds through the supported horizon.  Degrees 0--17
 // are exact; the final entry is the currently proved TD(18) <= 11 bound.
@@ -41,6 +44,53 @@ __device__ void decode_rank(Word rank,int n,Byte* word) {
         while(index-->0)remaining&=remaining-1;
         int bit=__ffs(remaining)-1;word[i]=bit+1;available&=~(1U<<bit);
     }
+}
+// The on-disk little-endian word layout is uploaded unchanged. Prefix counts
+// every eight high-vector words bound select work even for clustered ranks.
+__device__ __forceinline__ Word compact_low(const Word* archive,Word index) {
+    int width=archive[8];if(!width)return 0;Word bit=index*width;int shift=bit&63;
+    Word value=archive[archive[13]+(bit>>6)]>>shift;
+    if(shift+width>64)value|=archive[archive[13]+(bit>>6)+1]<<(64-shift);return value&((1ULL<<width)-1);
+}
+__device__ Word compact_select_zero_indexed(const Word* archive,Word zero) {
+    Word first=0,limit=archive[11]-1;const Word* directory=archive+archive[15];
+    while(first<limit){Word middle=first+((limit-first)>>1);if(directory[middle+1]<=zero)first=middle+1;else limit=middle;}
+    Word remaining=zero-directory[first],position=first*8;
+    while(true){Word bits=~archive[archive[14]+position];int zeros=__popcll(bits);
+        if(remaining<(Word)zeros){while(remaining--)bits&=bits-1;return position*64+__ffsll(bits)-1;}remaining-=zeros;position++;}
+}
+__device__ Word compact_select_zero(const Word* archive,Word zero) {
+    Word sampled=archive[archive[48]+zero/128],remaining=zero%128;if(!remaining)return sampled;Word position=sampled>>6;int shift=sampled&63;
+    Word bits=shift==63?0:~archive[archive[14]+position]&(~0ULL<<(shift+1));
+    for(int visited=0;visited<16;visited++){int zeros=__popcll(bits);if(remaining<=(Word)zeros){while(--remaining)bits&=bits-1;return position*64+__ffsll(bits)-1;}remaining-=zeros;bits=~archive[archive[14]+ ++position];}
+    return compact_select_zero_indexed(archive,zero);
+}
+__device__ int compact_archive_distance(const Word* archive,Word rank) {
+    if(!archive[6]||rank>=archive[7])return -1;int width=archive[8];Word bucket=rank>>width;
+    Word first=bucket?compact_select_zero(archive,bucket-1)-bucket+1:0,end=compact_select_zero(archive,bucket)-bucket,limit=end;
+    Word low=rank&((1ULL<<width)-1);
+    while(first<end){Word middle=first+((end-first)>>1);if(compact_low(archive,middle)<low)first=middle+1;else end=middle;}
+    if(first>=limit||compact_low(archive,first)!=low)return -1;
+    return archive[5]?archive[3]:(archive[archive[16]+(first>>4)]>>((first&15)*4))&15;
+}
+__device__ int compact_rank_distance(const Word* metadata,int n,Word rank) {
+    if(!metadata||metadata[n]==255)return -1;int floor=metadata[n],ceiling=metadata[19+n];Word previous=0;
+    for(int d=ceiling;d>=floor;d--){Word pointer=metadata[38+n*12+d];if(!pointer||pointer==previous)continue;previous=pointer;
+        int distance=compact_archive_distance((const Word*)pointer,rank);if(distance>=floor&&distance<=ceiling)return distance;}
+    return -floor-1;
+}
+__device__ int compact_distance(const Word* metadata,int n,const Byte* word,Word ordinary_rank) {
+    if(!metadata||metadata[n]==255)return -1;int floor=metadata[n],ceiling=metadata[19+n];bool canonical_needed=false;Word previous=0;
+    for(int d=ceiling;d>=floor;d--){Word pointer=metadata[38+n*12+d];if(!pointer||pointer==previous)continue;previous=pointer;const Word* archive=(const Word*)pointer;
+        if(!(archive[19]&1)){canonical_needed=true;continue;}int distance=compact_archive_distance(archive,ordinary_rank);if(distance>=floor&&distance<=ceiling)return distance;}
+    if(!canonical_needed)return -floor-1;Word canonical_rank=canonical_rank_of_word(word,n);previous=0;
+    for(int d=ceiling;d>=floor;d--){Word pointer=metadata[38+n*12+d];if(!pointer||pointer==previous)continue;previous=pointer;const Word* archive=(const Word*)pointer;
+        if(archive[19]&1)continue;int distance=compact_archive_distance(archive,canonical_rank);if(distance>=floor&&distance<=ceiling)return distance;}
+    return -floor-1;
+}
+extern "C" __global__ void query_compact_distances(int n,int jobs,const Word* ranks,const Word* metadata,int canonical,int* distances) {
+    int job=blockIdx.x*blockDim.x+threadIdx.x;if(job>=jobs)return;Word rank=ranks[job];Byte word[18];
+    if(canonical)distances[job]=compact_rank_distance(metadata,n,rank);else{decode_rank(rank,n,word);distances[job]=compact_distance(metadata,n,word,rank);}
 }
 __device__ Word packed_orbit_rank(const Byte* packed,int n,int action) {
     int N=n+1;Byte inverse[19],word[18];
@@ -165,7 +215,7 @@ __device__ int odd_unicycle_clearing_moves(const Byte* word,int n) {
     return (length+1)/2;
 }
 __device__ int core_distance(const Byte* p,int n,const signed char* table,const Word* offsets,int table_degree,
-    const unsigned* membership,int membership_degree,int membership_floor) {
+    const unsigned* membership,int membership_degree,int membership_floor,const Word* compact) {
     Byte tmp[18];for(int i=0;i<n;i++)tmp[i]=p[i];
     int m=n;
     while(m>0) {
@@ -182,25 +232,25 @@ __device__ int core_distance(const Byte* p,int n,const signed char* table,const 
     // proved diameter of the smaller degree is therefore an admissible upper
     // bound.  Negative values encode upper bounds as -bound-2; -1 remains
     // the unavailable/inconclusive sentinel.
-    if(m>table_degree && m!=membership_degree)return m<n?-diameter_upper[m]-2:-1;
+    if(m>table_degree && m!=membership_degree&&(!compact||compact[m]==255))return m<n?-diameter_upper[m]-2:-1;
     Word rank=0;unsigned used=0;
     for(int i=0;i<m;i++){int v=tmp[i];rank=rank*(m-i)+v-1-__popc(used&((1U<<(v-1))-1));used|=1U<<(v-1);}
-    return m<=table_degree?pattern_distance(table,offsets,m,rank):membership_distance(membership,rank,membership_floor);
+    return m<=table_degree?pattern_distance(table,offsets,m,rank):m==membership_degree?membership_distance(membership,rank,membership_floor):compact_distance(compact,m,tmp,rank);
 }
 // Returns 1 when a deletion proves distance <= remaining, 0 when a deletion
 // proves distance > remaining, and -1 when the degree-(n-1) layer is
 // unavailable or all deletion results are inconclusive. Insertion raises
 // transposition distance by at most one.
 __device__ int root_deletion_result(const Byte* p,int n,int remaining,const signed char* table,const Word* offsets,int table_degree,
-    const unsigned* membership,int membership_degree,int membership_floor) {
-    int m=n-1;if(m<0 || m>table_degree && m!=membership_degree)return -1;
+    const unsigned* membership,int membership_degree,int membership_floor,const Word* compact) {
+    int m=n-1;if(m<0 || m>table_degree && m!=membership_degree&&(!compact||compact[m]==255))return -1;
     Byte deletion[18];
     for(int omitted=0;omitted<n;omitted++) {
         int value=p[omitted];
         for(int i=0,j=0;i<n;i++)if(i!=omitted){int v=p[i];deletion[j++]=v-(v>value);}
         Word rank=0;unsigned used=0;
         for(int i=0;i<m;i++){int v=deletion[i];rank=rank*(m-i)+v-1-__popc(used&((1U<<(v-1))-1));used|=1U<<(v-1);}
-        int distance=m<=table_degree?pattern_distance(table,offsets,m,rank):membership_distance(membership,rank,membership_floor);
+        int distance=m<=table_degree?pattern_distance(table,offsets,m,rank):m==membership_degree?membership_distance(membership,rank,membership_floor):compact_distance(compact,m,deletion,rank);
         if(distance>=0) {
             if(distance>remaining)return 0;
             if(distance+1<=remaining)return 1;
@@ -216,7 +266,7 @@ __device__ int root_deletion_result(const Byte* p,int n,int remaining,const sign
 // failure to find such a move is deliberately inconclusive.
 __device__ int root_qualifying_move_result(const Byte* p,int n,int remaining,const int* cuts,int cut_count,
     const Byte* omega,Byte* child,const signed char* table,const Word* offsets,int table_degree,
-    const unsigned* membership,int membership_degree,int membership_floor) {
+    const unsigned* membership,int membership_degree,int membership_floor,const Word* compact) {
     int child_remaining=remaining-1;
     for(int cut=0;cut<cut_count;cut++) {
         int code=cuts[cut],a=code&31,b=(code>>5)&31,c=code>>10;
@@ -236,7 +286,7 @@ __device__ int root_qualifying_move_result(const Byte* p,int n,int remaining,con
         for(int i=b;i<c;i++)child[j++]=p[i];
         for(int i=a;i<b;i++)child[j++]=p[i];
         for(int i=c;i<n;i++)child[j++]=p[i];
-        int distance=core_distance(child,n,table,offsets,table_degree,membership,membership_degree,membership_floor);
+        int distance=core_distance(child,n,table,offsets,table_degree,membership,membership_degree,membership_floor,compact);
         if(distance>=0) { if(distance<=child_remaining)return 1; }
         else if(distance<-1 && -distance-2<=child_remaining)return 1;
     }
@@ -282,7 +332,7 @@ extern "C" __global__ void initialize_count(int jobs,int n,int frames,int stride
 extern "C" __global__ void advance_count(int active_count,int begin,const int* active,int* output,
     int* output_count,int n,int frames,int stride,int low,int high,int quantum,const int* cuts,int cut_count,
     int filter_slack_moves,int root_deletion_prepass,int root_move_prepass,int odd_cycle_prepass,Byte* stack,short* next,signed char* depth,Byte* stage,const Byte* weights,Byte* results,const signed char* table,const Word* offsets,
-    int table_degree,const unsigned* membership,int membership_degree,int membership_floor,Word* counters) {
+    int table_degree,const unsigned* membership,int membership_degree,int membership_floor,const Word* compact,Word* counters) {
     int index=begin+blockIdx.x*blockDim.x+threadIdx.x;if(index>=active_count)return;
     int job=active[index],d=depth[job],phase=stage[job],classification=-1;
     Byte word[18],child[18],omega[19];int cached=-2,omega_depth=-2;bool odd_cycle_resolved=false;
@@ -302,7 +352,7 @@ extern "C" __global__ void advance_count(int active_count,int begin,const int* a
             int lower=lower_bound(word,n);
             if(lower==0){classification=phase==0?0:1;break;}
             if(lower>remaining || remaining==0){d--;continue;}
-            int exact=core_distance(word,n,table,offsets,table_degree,membership,membership_degree,membership_floor);
+            int exact=core_distance(word,n,table,offsets,table_degree,membership,membership_degree,membership_floor,compact);
             if(exact<-1 && -exact-2<=remaining){classification=phase==0?0:1;break;}
             if(exact>=0){if(exact<=remaining){classification=phase==0?0:1;break;}d--;continue;}
             if(odd_cycle_prepass && d==0) {
@@ -310,13 +360,13 @@ extern "C" __global__ void advance_count(int active_count,int begin,const int* a
                 if(clearing>0 && clearing<=remaining){odd_cycle_resolved=true;classification=phase==0?0:1;break;}
             }
             if(root_deletion_prepass && d==0) {
-                int deletion=root_deletion_result(word,n,remaining,table,offsets,table_degree,membership,membership_degree,membership_floor);
+                int deletion=root_deletion_result(word,n,remaining,table,offsets,table_degree,membership,membership_degree,membership_floor,compact);
                 if(deletion>0){classification=phase==0?0:1;break;}
                 if(deletion==0){d--;continue;}
             }
             if(root_move_prepass && d==0) {
                 if(omega_depth!=d){lower_bound_permutation(word,n,omega);omega_depth=d;}
-                int move=root_qualifying_move_result(word,n,remaining,cuts,cut_count,omega,child,table,offsets,table_degree,membership,membership_degree,membership_floor);
+                int move=root_qualifying_move_result(word,n,remaining,cuts,cut_count,omega,child,table,offsets,table_degree,membership,membership_degree,membership_floor,compact);
                 if(move>0){classification=phase==0?0:1;break;}
             }
             // Store the lower-bound slack class in the unused high bits of
@@ -393,8 +443,8 @@ __device__ void pack_omega(const Byte* omega,int N,Byte* packed) {
     for(int i=0;i<N;i++){int bit=5*i,index=bit>>3,shift=3-(bit&7),v=omega[i];
         if(shift>=0)packed[index]|=v<<shift;else {packed[index]|=v>>-shift;packed[index+1]|=v<<(8+shift);}}
 }
-__device__ void canonical_omega_key(const Byte* word,int n,Byte* packed) {
-    Byte omega[19],inverse[19],least[19];int N=n+1;omega_of_word(word,n,omega);
+__device__ void canonical_omega_values(const Byte* word,int n,Byte* least) {
+    Byte omega[19],inverse[19];int N=n+1;omega_of_word(word,n,omega);
     for(int x=0;x<N;x++){inverse[omega[x]]=x;least[x]=omega[x];}
     for(int shift=0;shift<N;shift++)for(int reflection=0;reflection<2;reflection++) {
         int a=shift+1;if(a==N)a=0;bool smaller=false;
@@ -408,7 +458,11 @@ __device__ void canonical_omega_key(const Byte* word,int n,Byte* packed) {
             int mapped=reflection==0?omega[source]+shift:a-inverse[source];if(mapped<0)mapped+=N;else if(mapped>=N)mapped-=N;least[x]=mapped;
         }
     }
-    pack_omega(least,N,packed);
+}
+__device__ void canonical_omega_key(const Byte* word,int n,Byte* packed) {Byte least[19];canonical_omega_values(word,n,least);pack_omega(least,n+1,packed);}
+__device__ Word canonical_rank_of_word(const Byte* word,int n) {
+    Byte least[19],inverse[19],canonical[18];canonical_omega_values(word,n,least);for(int x=0;x<=n;x++)inverse[least[x]]=x;
+    int x=0;for(int i=0;i<n;i++){x=inverse[x==n?0:x+1];canonical[i]=x;}return rank_word(canonical,n);
 }
 __device__ Word canonical_bloom_hash(const Byte* key,int bytes,Word seed) {
     Word hash=1469598103934665603ULL^seed;
@@ -474,14 +528,15 @@ extern "C" __global__ void decode_sample_ranks(int jobs,int n,const Byte* keys,W
     int job=blockIdx.x*blockDim.x+threadIdx.x;if(job>=jobs)return;
     ranks[job]=packed_orbit_rank(keys+(Word)job*((5*(n+1)+7)/8),n,0);
 }
-extern "C" __global__ void prepare_parent_members(int parents,int n,int row_bytes,const Byte* rows,Word* members,int* counts) {
+extern "C" __global__ void prepare_parent_members(int parents,int n,int row_bytes,int rank_rows,const Byte* rows,Word* members,int* counts) {
     int parent=blockIdx.x,action=threadIdx.x,N=n+1;if(parent>=parents)return;
     __shared__ Word ranks[38];Word rank=~0ULL;
     if(action<2*N) {
         const Byte* packed=rows+parent*row_bytes+1;Byte inverse[19],word[18],member[18];
-        for(int i=0;i<N;i++){int bit=5*i,index=bit>>3,shift=3-(bit&7);
+        if(rank_rows){Word parent_rank=0;for(int b=0;b<8;b++)parent_rank|=(Word)packed[b]<<(8*b);decode_rank(parent_rank,n,word);}
+        else {for(int i=0;i<N;i++){int bit=5*i,index=bit>>3,shift=3-(bit&7);
             int v=shift>=0?(packed[index]>>shift)&31:((packed[index]<<-shift)|(packed[index+1]>>(8+shift)))&31;inverse[v]=i;}
-        int x=0;for(int i=0;i<n;i++){x=inverse[x==n?0:x+1];word[i]=x;}
+        int x=0;for(int i=0;i<n;i++){x=inverse[x==n?0:x+1];word[i]=x;}}
         int anchor=action>>1,direction=(action&1)?-1:1,value=anchor==0?0:word[anchor-1];
         for(int j=1;j<N;j++){int position=(anchor+direction*j+N)%N,symbol=position==0?0:word[position-1];member[j-1]=direction==1?(symbol-value+N)%N:(value-symbol+N)%N;}
         rank=rank_word(member,n);ranks[action]=rank;
@@ -491,10 +546,10 @@ extern "C" __global__ void prepare_parent_members(int parents,int n,int row_byte
 }
 extern "C" __global__ void generate_extensions(int parents,int n,int floor,int upper,int parent_floor,int row_bytes,const Byte* rows,const Word* members,
     int dense_parent,const signed char* table,const Word* offsets,const unsigned* membership,int membership_floor,
-    const unsigned* parent_bloom,Word parent_bloom_mask,Byte* output,Byte* deletion_keys,int* counts) {
+    const unsigned* parent_bloom,Word parent_bloom_mask,const Word* compact,Byte* output,Byte* deletion_keys,int* counts) {
     int job=blockIdx.x*blockDim.x+threadIdx.x,total=parents*2*n*n;if(job>=total)return;
     int member_index=job/n,position=job%n,parent=member_index/(2*n);Word member_rank=members[member_index];if(member_rank==~0ULL)return;
-    Byte member[18],word[18],deletion[18],omega[19];decode_rank(member_rank,n-1,member);
+    Byte member[18],word[18],deletion[18];decode_rank(member_rank,n-1,member);
     for(int i=0;i<position;i++)word[i]=member[i];word[position]=n;for(int i=position;i<n-1;i++)word[i+1]=member[i];
     int weight=orbit_weight(word,n);if(weight==0)return;atomicAdd(counts+1,1);
     int q=rows[parent*row_bytes],minimum=q,maximum=q,hi=minimum+1;if(hi>upper)hi=upper;
@@ -502,7 +557,7 @@ extern "C" __global__ void generate_extensions(int parents,int n,int floor,int u
         if(omitted==position)continue;int value=word[omitted];
         for(int i=0,j=0;i<n;i++)if(i!=omitted){int v=word[i];deletion[j++]=v-(v>value);}
         Word rank=rank_word(deletion,n-1);
-        int d=dense_parent==2?membership_distance(membership,rank,membership_floor):pattern_distance(table,offsets,n-1,rank);
+        int d=dense_parent==3?compact_distance(compact,n-1,deletion,rank):dense_parent==2?membership_distance(membership,rank,membership_floor):pattern_distance(table,offsets,n-1,rank);
         if(d<parent_floor){if(parent_floor==0&&d<0)atomicAdd(counts+5,1);atomicAdd(counts+2,1);return;}
         if(d<minimum)minimum=d;if(d>maximum)maximum=d;hi=minimum+1;if(hi>upper)hi=upper;
     }
@@ -516,10 +571,10 @@ extern "C" __global__ void generate_extensions(int parents,int n,int floor,int u
         }
     }
     if(maximum>hi){atomicAdd(counts+5,1);return;}if(hi<floor)return;
-    int slot=atomicAdd(counts,1),payload=(5*(n+1)+7)/8,out_bytes=payload+10;
+    int slot=atomicAdd(counts,1),out_bytes=10;
     Byte* out=output+(Word)slot*out_bytes;
-    Word rank=maximum==hi?0:rank_word(word,n);for(int b=0;b<8;b++)out[b]=(Byte)(rank>>(8*b));
-    out[8]=maximum==hi?maximum:dense_parent?(0x80|maximum):(0x40|q);omega_of_word(word,n,omega);pack_omega(omega,n+1,out+9);out[9+payload]=weight;
+    Word rank=rank_word(word,n);for(int b=0;b<8;b++)out[b]=(Byte)(rank>>(8*b));
+    out[8]=maximum==hi?maximum:dense_parent?(0x80|maximum):(0x40|q);out[9]=weight;
     if(maximum==hi)atomicAdd(counts+3,1);
     else if(!dense_parent) {
         int key_bytes=(5*n+7)/8;

@@ -22,7 +22,7 @@ record WriteBufferSizing(int pendingBatches,int recycledBatches,int inFlightBatc
     }
     static WriteBufferSizing calculate(int degree,int batchRecords,int legacyBatches,int writers,int producers,long budget,WriteAggregation aggregation) {
         if(batchRecords<1||legacyBatches<1||writers<1||producers<0||budget<0)throw new IllegalArgumentException("Invalid write buffer configuration");
-        int payload=PackedPermutation5.bytes(degree+1);
+        int payload=PermutationRank.bytes(degree);
         long raw=Math.multiplyExact(batchRecords,payload+2);
         int inFlight=Math.multiplyExact(2,writers);
         if(aggregation.rowBytes()!=payload+2||aggregation.nativeRecords()<1)throw new IllegalArgumentException("Incompatible write aggregation");

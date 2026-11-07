@@ -9,16 +9,24 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class WriteBufferSizingTest {
     @TempDir Path root;
+    @Test void rtx5090ProfileAccountsForAllWritersAndAggregateCopiesWithinItsStagingBudget() {
+        for(int degree=1;degree<=18;degree++) {
+            WriteAggregation aggregation=WriteAggregation.of(degree,4L<<30,2000,8L<<20);
+            WriteBufferSizing plan=WriteBufferSizing.calculate(degree,65536,8,128,176,32L<<30,aggregation);
+            assertEquals(256,plan.inFlightBatches());assertTrue(plan.pendingBatches()>256);
+            assertTrue(plan.estimatedMaximumBytes()<=(32L<<30));
+        }
+    }
     @Test void serverMemoryBudgetSupportsMuchMoreThan256BatchesWithoutAnUnboundedRecyclePool() {
         long budget=8L<<30;
         WriteBufferSizing plan=WriteBufferSizing.calculate(14,32768,128,64,128,budget);
-        assertEquals(393216,plan.batchBytes());assertTrue(plan.pendingBatches()>20000);
+        assertEquals(229376,plan.batchBytes());assertTrue(plan.pendingBatches()>20000);
         assertEquals(128,plan.inFlightBatches());assertTrue(plan.recycledBatches()<=256);
         assertTrue(plan.estimatedMaximumBytes()<=budget);
         WriteBufferSizing wider=WriteBufferSizing.calculate(18,32768,128,64,128,budget);
         assertTrue(wider.pendingBatches()<plan.pendingBatches(),"Wider records must reduce capacity under the same byte budget");
     }
-    @Test void zeroByteBudgetPreservesExplicitLegacyBatchLimits() {
+    @Test void zeroByteBudgetPreservesExplicitBatchLimits() {
         WriteBufferSizing plan=WriteBufferSizing.calculate(14,32768,128,64,0,0);
         assertEquals(128,plan.pendingBatches());assertEquals(128,plan.inFlightBatches());assertEquals(258,plan.recycledBatches());
     }

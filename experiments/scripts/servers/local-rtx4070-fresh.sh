@@ -16,7 +16,8 @@ task_data_root="$task_repo/experiments/data"
 task_data="$task_data_root/search"
 task_log_root="$task_repo/experiments/logs"
 task_log="$task_log_root/extension.log"
-task_native="$task_repo/experiments/target/native"
+task_build_root=${TDP_EXPERIMENT_BUILD_ROOT:-${TMPDIR:-/tmp}/td16-isolated-build}
+task_native="$task_build_root/experiments/native"
 cd "$task_repo"
 
 # Do not erase a live run. The bracketed pattern prevents pgrep from matching
@@ -112,11 +113,11 @@ task_nvrtc_version=$(readlink -f "$GPU_NVRTC_LIB/libnvrtc.so.12" |
 
 if [[ $task_resume == true ]]; then
   printf 'Rebuilding Ada (compute_89) and Blackwell (compute_120) PTX with CUDA %s...\n' "$task_cuda_version"
-  mvn -q -pl experiments -am -Pcuda-native -Dtdp.cudaArchitectures='89;120' \
+  mvn -q -pl experiments -am -Pisolated-build,cuda-native -Dtdp.isolatedBuildRoot="$task_build_root" -Dtdp.cudaArchitectures='89;120' \
     -DskipTests package dependency:copy-dependencies
 else
   printf 'Building clean Ada (compute_89) and Blackwell (compute_120) PTX with CUDA %s...\n' "$task_cuda_version"
-  mvn -q -pl experiments -am -Pcuda-native -Dtdp.cudaArchitectures='89;120' \
+  mvn -q -pl experiments -am -Pisolated-build,cuda-native -Dtdp.isolatedBuildRoot="$task_build_root" -Dtdp.cudaArchitectures='89;120' \
     -DskipTests clean package dependency:copy-dependencies
 fi
 
@@ -204,7 +205,7 @@ bash "$task_repo/experiments/run.sh" diameter --no-build \
   --rocks-memtable-mib 256 --rocks-sst-mib 256 --rocks-cache-mib 512 \
   --gpu-devices 0 --gpu-slots 4 --gpu-slot-mib 0 --vram-fraction 0.90 \
   --gpu-batch-records 262144 --gpu-queue 32 --gpu-parent-batch 4096 \
-  --gpu-quantum 65536 --lookup-chunk 262144 --rocks-multiget-keys 262144 \
+  --gpu-quantum 65536 --lookup-chunk 262144 \
   --log-file "$task_log" &
 task_search_pid=$!
 printf '%s\n' "$task_search_pid" > "$task_log_root/extension.pid"

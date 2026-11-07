@@ -62,7 +62,7 @@ are reused.
 When a complete parent layer no longer fits as an exact resident GPU table,
 the extension stage builds a negative-only GPU Bloom filter from its canonical
 keys. Definite misses are rejected in the generation kernel; possible matches
-are still confirmed against RocksDB, so Bloom false positives affect only
+are still confirmed against the mapped exact archive, so Bloom false positives affect only
 speed. Sparse exact-search roots are accumulated into useful GPU batches rather
 than launched after every short host-queue timeout; a final underfilled batch
 is sharded across the available streams so it can occupy multiple SMs. The
@@ -162,29 +162,26 @@ bash experiments/run.sh count --max-n 18 --through-n 9 \
 ```text
 experiments/data/extension/
   n-09/distance-05/
-    db/                      # RocksDB, canonical E(9,5) only
+    canonical-ranks-v1.bin    # immutable compressed canonical ranks
     manifest.properties      # scope=exact, distance, counts, completion
   n-10/distance-06/
     ...
 ```
 
 The path is independent of the horizon. Logs show every requested set, its
-parent distance range, and completion counts. Existing complete `floor-*`
-tail stores remain readable; they can supply individual requested exact sets
-without regeneration. New runs write only `distance-*` stores.
+parent distance range, and completion counts. Fresh-format `floor-*` tails
+can supply individual exact sets; normal runs write `distance-*` stores.
+Old omega/RocksDB formats are rejected: use a fresh data directory.
 
-The database key is only the packed image vector of canonical `omega`. Its
-value is the exact distance in the low four bits of one byte; the high four
-bits are zero. RocksDB stores whole bytes, so the value occupies one byte.
-Each permutation symbol occupies five bits, MSB first, with zero padding at
-the end. These are binary bytes, without punctuation, delimiters, or text
-digits. With 19 symbols, the key occupies 12 bytes; the logical key/value
-record occupies 13 bytes before RocksDB's indexing and compression overhead.
-`sigma=(0 1 ... n)` is fixed and recorded by the format rather than repeated
-in every row. Each deletion lookup queries the relevant exact set stores.
-RocksDB MultiGets are bounded to 2,048 keys; host packets are consumed in slices
-of 128 candidates to limit pinned SST blocks and temporary key allocations.
-Deletion queries stop for each candidate as soon as a missing deletion rejects it.
+The existing canonical omega representative is encoded as its anchored-word
+Lehmer rank. Complete ranks require at most 53 bits through degree 18.
+Fixed-width big-endian rank keys provide sorted construction in temporary
+RocksDB; finalization streams them into a checksummed Elias–Fano archive.
+Exact-distance archives omit per-record distance and orbit values. CPU reads
+map the archive directly; complete CUDA tails use the same exact rank layout.
+GPU parents carry ranks, and ten-byte generation packets contain rank, decision
+metadata and weight. Deletion queries stop when one missing deletion rejects
+the candidate. See [compact archives](docs/COMPACT_SETS.md) for format and sizes.
 
 All stored instances are canonical for the fixed-target pair `(omega,sigma)`,
 using `omega = sigma * beta^{-1}` and the left-composition convention from
@@ -192,8 +189,8 @@ using `omega = sigma * beta^{-1}` and the left-composition convention from
 including nontrivial stabilizers. Orbit weights are not persisted per record:
 they are computed in memory during generation and recovered by orbit expansion
 when reading parents. The manifest retains only aggregate counts per distance.
-Legacy stores with distance-prefixed keys and weight values remain readable;
-all new stores use permutation keys and distance values.
+The archive and manifest are the completed store; construction RocksDB is
+removed by default. `--compact-keep-rocks` retains it for debugging.
 
 ## How the next degree is computed
 
@@ -202,7 +199,7 @@ all new stores use permutation keys and distance values.
 3. Insert the new largest symbol in every position. This has a unique ordinary
    parent obtained by deleting that largest symbol.
 4. Reject noncanonical children. Look up deletion distances in the resident GPU
-   table, or generate canonical deletion keys on the GPU for batched RocksDB I/O.
+   dense/compact table, or query canonical deletion keys in the mapped archive.
 5. Use `max(deletion distances) <= d(child) <= 1+min(deletion distances)`.
    Mixed deletion distances determine the answer. Uniform distance `q` requires
    only the exact `CanSort(child,q)` decision, unless the known diameter bound
@@ -228,14 +225,14 @@ lower-bound slack `s`, it admits only `+2` moves for `s=0`, `+2/0` moves for
 `s=1`, and every move for `s>=2`. The move delta is computed before building
 the child with the emitter's audited cycle-delta routine. At each root it also
 queries every standardized one-symbol deletion when a degree-`n-1` pattern
-table or completed membership bitmap is resident. A deletion sortable within
+table, compact tail or completed membership bitmap is resident. A deletion sortable within
 `r-1` proves the root sortable within `r`; an exact deletion above `r` rejects
 the root.
 
 A second root prepass scans qualifying `+2` moves that create a fixed point,
 contracts the resulting bond without changing distance, and queries the
 degree-`n-1` exact data. The resident in-kernel path scans all qualifying moves.
-The RocksDB path emits only the first qualifying contracted key; if that lookup
+The host archive path emits only the first qualifying contracted key; if that lookup
 is inconclusive, complete DFS still settles the root. The default
 `-Dextension.rootMovePrepass=auto` enables this at budgets at least 8; `true` or
 `false` forces it, and `-Dextension.rootMoveMinBudget=...` changes the automatic
@@ -305,9 +302,9 @@ Build CUDA kernels with CMake and the installed CUDA toolkit, following the
 emitter's Maven/CMake build workflow:
 
 ```bash
-mvn -pl experiments -am -Pcuda-native -DgpuTests=true verify dependency:copy-dependencies
+mvn -pl experiments -am -Pisolated-build,cuda-native -DgpuTests=true verify dependency:copy-dependencies
 bash experiments/run.sh diameter --no-build \
-  --cuda-ptx-dir "$PWD/experiments/target/native" --gpu-devices 0,1,2,3 \
+  --cuda-ptx-dir "${TMPDIR:-/tmp}/td16-isolated-build/experiments/native" --gpu-devices 0,1,2,3 \
   --log-file experiments/logs/extension.log
 ```
 
@@ -329,7 +326,8 @@ bash experiments/run.sh diameter --max-n 18 \
 `--gpu-devices` is a comma-separated list of distinct CUDA-visible ordinals;
 the default is `0`. As in the emitter, `--gpu-slots` means slots **per device**:
 the example has eight search slots. Device existence is checked before opening
-contexts. Each GPU has one generation stream, and available GPUs acquire
+contexts. Each GPU has one generation stream by default; `--gpu-generation-streams`
+selects independently buffered streams per device. Available streams acquire
 parent batches from the host pipeline. Search slots acquire batches from one
 shared bounded queue, so faster devices can process more work. The writer and
 membership index remain shared. A first match or failure stops all devices.
@@ -344,64 +342,40 @@ batches. The batch-record limit can keep actual allocation below the cap.
 Shared pattern tables, generation buffers, CUDA runtime resources and pinned
 host buffers are outside this per-slot cap.
 
-Before each computation, every GPU automatically loads useful completed
-distance sets into resident lookup tables. Cache selection uses that device's
-free VRAM after reserving generation buffers, the configured search batches
-for all its slots, a 256 MiB margin and the `--vram-fraction` headroom. A device
-with less memory selects smaller caches and keeps using the persistent index
-for other lookups. Loading a cache reads completed stores; it does not generate
-additional exact sets.
-If the next useful degree fits as a bitmap but not as a four-bit table, its
-bitmap space is protected before loading smaller pattern tables.
+Before each computation, every GPU loads useful completed distance sets. Compact
+complete tails load first, with generation/search workspaces and headroom
+reserved. Covered Bloom and bitmap caches are skipped. Beyond the default
+compact minimum degree 13, sparse exact archives can fit when factorial-sized
+ordinary tables cannot. Missing device coverage uses the memory-mapped host
+archive.
 
-Each GPU owns its four-bit pattern table, requiring about 3.14 GiB through
-degree 13, or 43.74 GiB through degree 14. Selection supports all experiment
-degrees through 18, with 64-bit entry offsets and allocation sizes; the
-factorial growth and available VRAM determine the practical limit. Tables are
-copied between contexts through a small host staging
-buffer pinned with CUDA's [portable allocation flag](https://docs.nvidia.com/cuda/archive/12.6.0/cuda-driver-api/group__CUDA__MEM.html),
-so every context can use it. Each device can grow its cache independently.
-A device with insufficient memory builds a smaller table and continues
-using the persistent index where necessary. Search and generation synchronize
-through blocking CUDA completion events, following the emitter's slot design.
+Dense four-bit tables retain direct lookup for hot degrees. Automatic dense
+allocation uses at most 35% of total VRAM and respects the workspace budget:
+typically degree 12 on an 8 GiB GPU, degree 13 on 24 GiB and degree 14 on
+141 GiB. Explicit numeric pattern or dense limits override this automatic
+ceiling while retaining memory fitting. Dense coverage releases duplicate
+compact allocations. Every context owns its device pointers; dense tables
+can be copied through portable pinned staging buffers.
 
-If a useful completed diametral set lies beyond the selected four-bit cache,
-the GPU also tries a one-bit membership table, starting at the nearest degree
-to the current computation and falling back to smaller completed degrees.
-It skips a bitmap whose information is already covered by the four-bit table.
-For D(14), this occupies 10,897,286,400 bytes (10.15 GiB); together with the
-degree-13 four-bit tables, the lookup data occupies 13.29 GiB per GPU, before
-generation and DFS buffers.
-CUDA expands the canonical source orbits. Both the number of source records
-and the bitmap population count must agree with the completed manifest before
-the table becomes available to the search. Additional devices copy the table
-through portable pinned host memory and independently check its population.
+Four-bit tables require about 3.14 GiB through degree 13 and 43.74 GiB through
+14. The compact D(14) archive instead needs about 256 MiB at its known
+cardinality, compared with a 10.15 GiB ordinary bitmap. Compact tails support
+both deletion generation and DFS contractions. Only complete upper tails
+provide absence bounds; absent members have distance below the retained floor.
 
-D(15) can use this bitmap for its degree-14 deletion lookups on the GPU. The DFS
-also queries it when distance-preserving adjacency contractions leave a
-degree-14 state, so later degrees can benefit. A set bit means exact distance
-8; an unset bit proves only distance at most 7. In particular, this does not
-replace the distance-7 support store needed for E(15,8). Once that store exists,
-a sufficiently large GPU loads both degree-14 distances into the four-bit
-cache and handles those deletion lookups directly. Smaller devices continue
-using the persistent index. No extra exact sets are generated for this cache.
-When that degree-14 distance-7 support store is generated, however, the already
-completed D(14) bitmap answers its `CanSort(7)` queries directly. The support
-set still has to be enumerated and persisted, but those queries need no DFS.
+The pattern and membership degree controls default to auto. Numeric values cap
+pattern tables or select a membership degree; zero disables that cache.
+--gpu-dense-max-degree sets an explicit dense ceiling, --gpu-compact-min-degree
+sets the first compact degree, and --no-compact-cache disables compact CUDA
+caches while retaining compact persistence. Bitmaps and Bloom filters remain
+fallback caches when complete compact coverage cannot fit.
 
-Both `--gpu-membership-degree` and `--gpu-pattern-degree` default to `auto`.
-No cache parameter is required on any GPU. A numeric membership degree selects
-that exact degree; a numeric pattern degree caps the four-bit table. `0`
-disables the respective cache, and smaller overrides are useful for exhaustive
-checks. Membership tables are optional per device: memory fitting reserves
-generation buffers, a full configured batch
-for every slot, and a safety margin before allocation. Devices on which the
-bitmap does not fit retain the existing lookup path. The bitmap is rebuilt
-from the canonical stores when needed and is not persisted as another certificate.
+NVRTC modules compile once per source, architecture and compiler options within
+the process. Device allocations and modules remain independent per context.
 
-Supplied-rank searches check on the GPU that every queued rank agrees with
-its packed permutation key, and check that returned decision bytes agree
-with the device counters. A failed known diameter count is rejected before
+Supplied-rank searches check that returned decision bytes agree with device
+counters. Diagnostic packed keys, when supplied, are checked against ranks
+on the GPU. A failed known diameter count is rejected before
 publishing a completed store. These errors stop the run.
 
 The emitter properties `tdp.gpuDevices`, `tdp.gpuSlots` and `tdp.gpuBudgetMB`
@@ -506,22 +480,35 @@ or remove the final publication barrier.
 The defaults use 256 MiB memtables (up to six), 256 MiB target SST files, LZ4,
 concurrent memtable insertion, pipelined writes, and parallel flush/compaction.
 On the 22-thread machine, 22 write workers and up to 11 native background jobs
-are available, with four flush workers in the separate high-priority pool.
-A 512 MiB block cache supports point lookups. New SSTs use a two-level index
-and partitioned Bloom filters with 4 KiB metadata blocks. Read-only stores keep
-top-level metadata outside that cache; legacy whole-file filters stay resident
-in their table readers. This avoids repeatedly loading large filter blocks.
-Sequential parent
-scans use readahead and bypass that cache. Large parent sets use parallel
-iterators over disjoint key ranges, balanced with RocksDB's range-size estimates.
-Full memtables flush automatically;
-small periodic forced flushes are avoided. Settings are workload-dependent,
-and the run logs their values and final SST/compaction statistics.
+are available, with two flush workers in the separate high-priority pool.
+A 512 MiB cache supports the temporary construction database. Completed stores
+use mapped compressed ranks, with no RocksDB point lookups or resident SST
+block caches. Parallel parent scans split archives by record index and stream
+through bounded queues. Full memtables flush automatically; small periodic
+forced flushes are avoided.
 
-At degree completion, all GPU decisions finish, all output buffers drain, the
-database completes a blocking flush to SST files. The closed store and its
-manifest are then published by an atomic directory rename. Only these complete
-stores can become parents for the next degree.
+At degree completion, all decisions and buffers drain and construction RocksDB
+flushes to SST files. Finalization streams sorted ranks into the archive,
+verifies counts and writes its checksum. The database is removed by default;
+the archive and manifest are published by an atomic directory rename. Only
+complete published stores can become parents.
+
+Archive finalization automatically uses all CPU cores available to the JVM for
+sets with at least one million records. Workers compress disjoint sorted rank
+ranges and assemble their bit streams into the same archive format. `--compact-build-threads`
+sets the worker count; `1` forces sequential finalization. This is separate
+from the RocksDB insertion worker count. `COMPACT_PROGRESS` reports encoding,
+assembly, index construction and checksum progress. Temporary encoded streams
+use bounded buffers and are removed after assembly.
+
+
+The [RTX 5090 profile](scripts/servers/rtx5090.sh) defaults to a fresh-format
+degree-1-through-9 computation. It detects all CPU threads, uses two generation
+streams and 16 search slots, and selects a 128 GiB heap with 32 GiB persistence
+staging. [rtx5090-build.sh](scripts/servers/rtx5090-build.sh) builds native
+Blackwell PTX with CUDA 12.8+ within the driver's supported version. Set
+`TDP_DATA_DIR` and optionally `TDP_LOG_DIR` to the attached volume. The detached
+launcher accepts this profile and `--resume` to reuse completed layers.
 
 The [quad RTX 3090 profile](scripts/servers/quad-3090.sh) targets four 24 GiB GPUs,
 184 CPUs of quota and approximately 242 GiB RAM. It selects eight slots per
@@ -549,7 +536,7 @@ bash experiments/run.sh count --max-n 18 \
   --batch-records 16384 --write-queue 8 \
   --gpu-batch-records 16384 --gpu-queue 8 --gpu-slots 4 \
   --gpu-parent-batch 4096 --gpu-quantum 4096 \
-  --lookup-chunk 262144 --rocks-multiget-keys 262144 \
+  --lookup-chunk 262144 \
   --rocks-write-threads 22 --rocks-background-jobs 11 --rocks-flush-threads 4 \
   --rocks-memtable-mib 256 --rocks-sst-mib 256 --rocks-cache-mib 512 \
   --data-dir experiments/data/extension \
@@ -557,8 +544,11 @@ bash experiments/run.sh count --max-n 18 \
 ```
 
 `--no-gpu` selects CPU-only exact queries. `--base-degree` supports 0 through 9.
-`--lookup-chunk` bounds each host candidate slice; `--rocks-multiget-keys`
-bounds each JNI `MultiGet`. Both accept 1 through 262,144.
+`--lookup-chunk` selects any positive host candidate slice size.
+`--gpu-producer-batch` controls producer request sizes (default up to 4,096,
+bounded by the search batch); `--gpu-min-batch-records` controls sparse dispatch.
+`--rocks-subcompactions`, `--rocks-max-memtables` and `--rocks-max-open-files`
+configure construction resources; -1 selects unlimited open-file caching.
 `--no-build` reuses the already-built module and copied dependencies.
 `--log-file` appends console output, including a run/PID header.
 Progress includes a rolling `settled_per_minute` rate for canonical instances;
@@ -577,6 +567,11 @@ they do not encode a CUDA release. This workspace may reuse the existing
 runtime under `../new-td/build/gpu/cuda/`; that project is not modified.
 
 ## Verification
+
+The [compact archive and density audit](docs/COMPACT_SETS.md) describe the
+production rank format for persistence, RAM and VRAM. Run `density-audit`
+against completed fresh-format stores to report sizes and verify membership
+and orbit counts for bounded small sets.
 
 CPU tests compare every persisted canonical layer and ordinary membership
 answer with independent BFS through degree 9. They cover five-bit packing,
@@ -601,10 +596,11 @@ check `N=5,7,9` against exact small-degree distances. The `N=19` tests verify
 the complete survivor/orbit classification, realizability of both oriented
 representatives, their ten-move native clearing witnesses, and resolution by
 the same production prepass.
-The configured GPU library path is needed for these tests:
+The configured GPU library path is needed for these tests. Use the isolated
+profile to protect Maven output from IDE-generated classes:
 
 ```bash
-mvn -pl experiments -am -DgpuTests=true verify
+mvn -pl experiments -am -Pisolated-build -DgpuTests=true clean verify
 ```
 
 Run only the consecutive degree-1-through-11 test with:

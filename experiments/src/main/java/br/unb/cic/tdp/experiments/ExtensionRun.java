@@ -21,7 +21,7 @@ final class ExtensionRun {
             FileLock lock=channel.tryLock()) {
             if(lock==null)throw new IOException("Another extension run owns "+config.dataDirectory());
             SmallTables tables=new SmallTables(config.gpu()?0:Math.min(config.baseDegree(),config.maxN()));
-            System.out.println("EXTENSION data="+config.dataDirectory()+" encoding=5bits/symbol canonical-only=true async-writer=true gpu="+config.gpu());
+            System.out.println("EXTENSION data="+config.dataDirectory()+" encoding="+LayerManifest.ENCODING+" storage="+LayerManifest.STORAGE+" canonical-only=true async-writer=true gpu="+config.gpu());
             RocksTuning.log();
             LayerCatalog catalog=new LayerCatalog(config.dataDirectory());
             Stats[] decision={null};
@@ -124,22 +124,23 @@ final class ExtensionRun {
             ThreadLocal<Worker> local=ThreadLocal.withInitial(()->new Worker(n,floor,Math.max(0,floor-1),parents,writer,resolver,tables,stats));
             int outstanding=0;
             int parentBatch=config.gpu()?Integer.getInteger("extension.gpuParentBatch",4096):128;
-            try(CanonicalLayerStore.BatchCursor cursor=benchmark&&skip>0?parents.cursor(sourceFloor):parents.source(sourceFloor,parentBatch,config.threads());
+            boolean rankRows=config.gpu();int rowBytes=rankRows?9:parents.rowBytes;
+            try(CanonicalLayerStore.BatchCursor cursor=rankRows?parents.sourceRanks(sourceFloor,parentBatch,benchmark&&skip>0?1:config.threads()):benchmark&&skip>0?parents.cursor(sourceFloor):parents.source(sourceFloor,parentBatch,config.threads());
                 GpuCandidatePool generator=config.gpu()?new GpuCandidatePool(resolver,parents,n,floor,parentBatch):null) {
                 byte[] input;
                 long remainingSkip=skip,submitted=0;
                 while(!writer.hasMatch()&&(input=cursor.nextBatch(parentBatch))!=null) {
-                    int records=input.length/parents.rowBytes;
+                    int records=input.length/rowBytes;
                     if(remainingSkip>=records){remainingSkip-=records;continue;}
                     int first=(int)remainingSkip,take=(int)Math.min(records-first,limit-submitted);remainingSkip=0;
                     if(take==0)break;
-                    if(first!=0||take!=records)input=java.util.Arrays.copyOfRange(input,first*parents.rowBytes,(first+take)*parents.rowBytes);
+                    if(first!=0||take!=records)input=java.util.Arrays.copyOfRange(input,first*rowBytes,(first+take)*rowBytes);
                     submitted+=take;
                     writer.check();resolver.check();
                     if(outstanding>=2*config.threads()){completed.take().get();outstanding--;}
                     byte[] owned=input;
                     if(generator!=null) {
-                        completed.submit(()->{generator.process(owned,stats,writer,resolver);return null;});outstanding++;
+                        completed.submit(()->{generator.process(owned,stats,writer,resolver,rankRows);return null;});outstanding++;
                         continue;
                     }
                     completed.submit(()->{local.get().process(owned);return null;});outstanding++;

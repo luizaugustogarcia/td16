@@ -28,9 +28,9 @@ final class ExtensionResolver implements AutoCloseable {
     private static final class DecisionComplete extends RuntimeException {
         DecisionComplete(){super(null,null,false,false);}
     }
-    private record Request(int budget,int count,long[] ranks,byte[] omegas,byte[] weights){}
-    private static final Request FINISH=new Request(-1,0,null,null,null);
-    final int degree,floor,payloadBytes,batchRecords;
+    private record Request(int budget,int count,long[] ranks,byte[] weights){}
+    private static final Request FINISH=new Request(-1,0,null,null);
+    final int degree,floor,payloadBytes,batchRecords,producerBatchRecords;
     final AsyncCanonicalWriter writer;
     final SmallTables tables;
     final AtomicLong cpuQueries=new AtomicLong(),gpuQueries=new AtomicLong(),gpuBatches=new AtomicLong();
@@ -50,6 +50,8 @@ final class ExtensionResolver implements AutoCloseable {
     ExtensionResolver(int degree,int floor,AsyncCanonicalWriter writer,SmallTables tables,
                       boolean gpu,int batchRecords,int queueBatches,double vramFraction,Path dataDirectory,DeviceFactory factory) throws IOException {
         this.degree=degree;this.floor=floor;this.writer=writer;this.tables=tables;this.batchRecords=batchRecords;
+        producerBatchRecords=Integer.getInteger("extension.gpuProducerBatchRecords",Math.min(batchRecords,4096));
+        if(producerBatchRecords<1||producerBatchRecords>batchRecords)throw new IllegalArgumentException("GPU producer batch must be 1..gpuBatchRecords");
         this.factory=factory;
         payloadBytes=PackedPermutation5.bytes(degree+1);pending=new ArrayBlockingQueue<>(queueBatches);
         if(gpu) {
@@ -73,26 +75,24 @@ final class ExtensionResolver implements AutoCloseable {
     final class Pending implements AutoCloseable {
         final ExactSorter cpu;
         long[] ranks;
-        byte[] omegas,weights;
+        byte[] weights;
         int budget=-1,count;
-        final int producerRecords=Math.min(batchRecords,256);
+        final int producerRecords=producerBatchRecords;
         Pending(ExactSorter cpu){this.cpu=cpu;}
         void append(byte[] word,byte[] omega,int q,int weight) throws IOException {
-            byte[] packed=PackedPermutation5.encode(omega,degree+1);
-            appendRank(SmallTables.rank(word,degree),packed,0,q,weight);
+            appendRank(SmallTables.rank(word,degree),q,weight);
         }
-        void appendRank(long rank,byte[] packed,int offset,int q,int weight) throws IOException {
+        void appendRank(long rank,int q,int weight) throws IOException {
             if(writer.hasMatch())return;
             check();if(count>0&&budget!=q)flush();
-            if(ranks==null){ranks=new long[producerRecords];omegas=new byte[producerRecords*payloadBytes];weights=new byte[producerRecords];}
+            if(ranks==null){ranks=new long[producerRecords];weights=new byte[producerRecords];}
             budget=q;ranks[count]=rank;weights[count]=(byte)weight;
-            System.arraycopy(packed,offset,omegas,count*payloadBytes,payloadBytes);
             if(++count==producerRecords)flush();
         }
         void flush() throws IOException {
-            if(writer.hasMatch()){ranks=null;omegas=null;weights=null;count=0;return;}
-            if(count==0)return;check();Request request=new Request(budget,count,ranks,omegas,weights);
-            ranks=null;omegas=null;weights=null;count=0;
+            if(writer.hasMatch()){ranks=null;weights=null;count=0;return;}
+            if(count==0)return;check();Request request=new Request(budget,count,ranks,weights);
+            ranks=null;weights=null;count=0;
             if(worker==null)resolveCpu(request,cpu);else put(pending,request);
         }
         public void close() throws IOException {flush();}
@@ -105,32 +105,35 @@ final class ExtensionResolver implements AutoCloseable {
                 if(writer.hasMatch())break;
                 int distance=request.budget+(cpu.canSort(request.ranks[i],degree,request.budget)?0:1);
                 resolved++;
-                if(distance>=floor)output.appendPacked(request.omegas,i*payloadBytes,distance,request.weights[i]&255);
+                if(distance>=floor)output.appendRank(request.ranks[i],distance,request.weights[i]&255);
             }
         }
         cpuQueries.addAndGet(resolved);
     }
     private final class Assembly {
         final int budget;
-        long[] ranks=new long[batchRecords];byte[] omegas=new byte[batchRecords*payloadBytes],weights=new byte[batchRecords];int count;
+        long[] ranks=new long[batchRecords];byte[] weights=new byte[batchRecords];int count;
         Assembly(int budget){this.budget=budget;}
-        Request drain(){Request result=new Request(budget,count,ranks,omegas,weights);
-            ranks=new long[batchRecords];omegas=new byte[batchRecords*payloadBytes];weights=new byte[batchRecords];count=0;return result;}
+        Request drain(){Request result=new Request(budget,count,ranks,weights);
+            ranks=new long[batchRecords];weights=new byte[batchRecords];count=0;return result;}
     }
     private void gpuLoop(double vramFraction,Path dataDirectory) {
         List<Device> opened=new ArrayList<>();ExecutorService slots=null;
         try {
             GpuSettings settings=GpuSettings.system();settings.validateAvailable(factory.available());
+            int generationStreams=GpuSettings.generationStreams();
             int quantum=Integer.getInteger("extension.gpuQuantum",4096),parentBatch=Integer.getInteger("extension.gpuParentBatch",4096);
             if(parentBatch<1)throw new IllegalArgumentException("GPU parent batch must be positive");
             for(int ordinal:settings.layout().devices()) {
                 GpuStreamingCounter gpu=factory.open(ordinal,tables,quantum);Device device=new Device(ordinal,gpu);opened.add(device);
-                long workspaceReserve=settings.layout().slotsPerDevice()*(GpuStreamingCounter.fixedBatchBytes(degree)+
+                long workspaceReserve=Math.multiplyExact((long)settings.layout().slotsPerDevice(),GpuStreamingCounter.fixedBatchBytes(degree)+
                     batchRecords*GpuStreamingCounter.bytesPerJob(degree,RetentionPlan.upper(degree)+1));
-                long cacheReserve=GpuCandidateGenerator.deviceBytes(degree,parentBatch,false)+workspaceReserve+(256L<<20);
+                long generationReserve=Math.multiplyExact(generationStreams,GpuCandidateGenerator.deviceBytes(degree,parentBatch,false));
+                long cacheReserve=Math.addExact(Math.addExact(generationReserve,workspaceReserve),256L<<20);
                 GpuCacheBudget cacheBudget=new GpuCacheBudget(cacheReserve,vramFraction);
-                long membershipReserve=gpu.membershipReserve(dataDirectory,degree-1,degree,cacheBudget);
                 int parentDegree=degree-1,parentFloor=Math.max(0,floor-1),parentCeiling=Math.min(floor,RetentionPlan.upper(parentDegree));
+                gpu.loadCompactTables(dataDirectory,parentDegree,parentFloor,parentCeiling,degree,cacheBudget);
+                long membershipReserve=gpu.membershipReserve(dataDirectory,degree-1,degree,cacheBudget);
                 long canonicalBloomReserve=gpu.canonicalBloomReserve(dataDirectory,parentDegree,parentFloor,parentCeiling,cacheBudget.reserve(membershipReserve));
                 GpuCacheBudget patternBudget=cacheBudget.reserve(Math.addExact(membershipReserve,canonicalBloomReserve));
                 List<Device> sources=opened.subList(0,opened.size()-1).stream().sorted(Comparator.comparingInt((Device d)->d.gpu.tableDegree).reversed()).toList();
@@ -149,10 +152,11 @@ final class ExtensionResolver implements AutoCloseable {
                     gpu.loadCanonicalBloom(dataDirectory,parentDegree,parentFloor,parentCeiling,cacheBudget);
                 gpu.activate();long[] free={0},total={0};cuMemGetInfo(free,total);
                 boolean dense=gpu.parentLookupKind(degree-1,Math.max(0,floor-1))!=0;
-                long generationBytes=GpuCandidateGenerator.deviceBytes(degree,parentBatch,dense);
+                long generationBytes=Math.multiplyExact(generationStreams,GpuCandidateGenerator.deviceBytes(degree,parentBatch,dense));
                 device.slotBudget=settings.slotBudget(free[0],generationBytes,vramFraction);
                 GpuStreamingCounter.capacityForBudget(degree,RetentionPlan.upper(degree)+1,1,device.slotBudget);
-                System.out.printf("GPU_DEVICE ordinal=%d name=%s slots=%d slot_budget_bytes=%d generation_reserved_bytes=%d pattern_degree=%d pattern_bytes=%d membership_degree=%d membership_bytes=%d canonical_bloom_bytes=%d cache_workspace_reserved_bytes=%d%n",ordinal,gpu.context.deviceName,settings.layout().slotsPerDevice(),device.slotBudget,generationBytes,gpu.tableDegree,gpu.tableBytes,gpu.membershipDegree(),gpu.membership==null?0:gpu.membership.bytes,gpu.canonicalBloom==null?0:gpu.canonicalBloom.bytes,cacheReserve);
+                System.out.printf("GPU_DEVICE ordinal=%d name=%s slots=%d slot_budget_bytes=%d generation_streams=%d generation_reserved_bytes=%d pattern_degree=%d pattern_bytes=%d membership_degree=%d membership_bytes=%d canonical_bloom_bytes=%d cache_workspace_reserved_bytes=%d%n",ordinal,gpu.context.deviceName,settings.layout().slotsPerDevice(),device.slotBudget,generationStreams,generationBytes,gpu.tableDegree,gpu.tableBytes,gpu.membershipDegree(),gpu.membership==null?0:gpu.membership.bytes,gpu.canonicalBloom==null?0:gpu.canonicalBloom.bytes,cacheReserve);
+                System.out.printf("GPU_COMPACT_DEVICE ordinal=%d compact_bytes=%d parent_lookup_kind=%d%n",ordinal,gpu.compactTables==null?0:gpu.compactTables.bytes,gpu.parentLookupKind(parentDegree,parentFloor));
             }
             devices=List.copyOf(opened);int slotCount=settings.layout().totalSlots();
             slots=Executors.newFixedThreadPool(slotCount,Thread.ofPlatform().name("extension-gpu-slot-",0).factory());
@@ -165,7 +169,7 @@ final class ExtensionResolver implements AutoCloseable {
             }
             int minimumBatch=Integer.getInteger("extension.gpuMinBatchRecords",Math.min(4096,batchRecords));
             if(minimumBatch<1||minimumBatch>batchRecords)throw new IllegalArgumentException("extension.gpuMinBatchRecords must be 1..gpuBatchRecords");
-            System.out.printf("GPU_SLOTS n=%d devices=%s slots_per_device=%d total_slots=%d target_batch=%d minimum_batch=%d CPU_sorting=false quantum=%d%n",degree,Arrays.toString(settings.layout().devices()),settings.layout().slotsPerDevice(),slotCount,batchRecords,minimumBatch,quantum);
+            System.out.printf("GPU_SLOTS n=%d devices=%s slots_per_device=%d total_slots=%d target_batch=%d producer_batch=%d minimum_batch=%d CPU_sorting=false quantum=%d%n",degree,Arrays.toString(settings.layout().devices()),settings.layout().slotsPerDevice(),slotCount,batchRecords,producerBatchRecords,minimumBatch,quantum);
             ready.complete(null);Assembly[] groups=new Assembly[12];
             while(true) {
                 check();Request request=pending.poll(20,TimeUnit.MILLISECONDS);
@@ -179,7 +183,6 @@ final class ExtensionResolver implements AutoCloseable {
                 for(int first=0;first<request.count;) {
                     int take=Math.min(batchRecords-group.count,request.count-first),offset=group.count;
                     System.arraycopy(request.ranks,first,group.ranks,offset,take);
-                    System.arraycopy(request.omegas,first*payloadBytes,group.omegas,offset*payloadBytes,take*payloadBytes);
                     System.arraycopy(request.weights,first,group.weights,offset,take);group.count+=take;first+=take;
                     if(group.count==batchRecords)put(jobs,group.drain());
                 }
@@ -193,7 +196,6 @@ final class ExtensionResolver implements AutoCloseable {
                     int first=total*shard/shards,end=total*(shard+1)/shards,count=end-first;
                     put(jobs,new Request(group.budget,count,
                         Arrays.copyOfRange(group.ranks,first,end),
-                        Arrays.copyOfRange(group.omegas,first*payloadBytes,end*payloadBytes),
                         Arrays.copyOfRange(group.weights,first,end)));
                 }
                 group.count=0;
@@ -246,10 +248,10 @@ final class ExtensionResolver implements AutoCloseable {
                         if(writer.hasMatch())break;
                         int count=Math.min(active.capacity,request.count-first);
                         long[] ranks=first==0?request.ranks:Arrays.copyOfRange(request.ranks,first,first+count);
-                        byte[] decisions=active.classifyRanks(ranks,count,()->{if(writer.hasMatch())throw new DecisionComplete();try{check();}catch(IOException error){throw new java.io.UncheckedIOException(error);}},request.omegas,first*payloadBytes);
+                        byte[] decisions=active.classifyRanks(ranks,count,()->{if(writer.hasMatch())throw new DecisionComplete();try{check();}catch(IOException error){throw new java.io.UncheckedIOException(error);}});
                         for(int i=0;i<count;i++) {
                             int distance=q+decisions[i];
-                            if(distance>=floor)output.appendPacked(request.omegas,(first+i)*payloadBytes,distance,request.weights[first+i]&255);
+                            if(distance>=floor)output.appendRank(request.ranks[first+i],distance,request.weights[first+i]&255);
                         }
                         gpuQueries.addAndGet(count);gpuBatches.incrementAndGet();
                         device.queries.addAndGet(count);device.batches.incrementAndGet();

@@ -19,6 +19,7 @@ final class GpuStreamingCounter implements AutoCloseable {
     private final CUdeviceptr emptyMembership=new CUdeviceptr();
     GpuMembershipTable membership;
     GpuCanonicalBloom canonicalBloom;
+    GpuCompactTables compactTables;
     int tableDegree;
     final int[] patternFloors=new int[19];
     final int quantum;
@@ -58,6 +59,7 @@ final class GpuStreamingCounter implements AutoCloseable {
                 "--define-macro="+(soa?"SOA_STACK":"AOS_STACK"));
             cuModuleLoadData(module,ptx);moduleReady=true;
             verifyPatternLayout();
+            verifyCompactLayout();
             cuModuleGetFunction(filterRoots,module,"filter_count_roots");
             cuModuleGetFunction(validateRoots,module,"validate_root_keys");
             cuModuleGetFunction(initialize,module,"initialize_count");cuModuleGetFunction(advance,module,"advance_count");
@@ -85,6 +87,22 @@ final class GpuStreamingCounter implements AutoCloseable {
         }
     }
     void activate(){cuCtxSetCurrent(context.context);}
+    private void verifyCompactLayout() {
+        try {CUdeviceptr version=new CUdeviceptr();long[] bytes={0},actual={0};cuModuleGetGlobal(version,bytes,module,"compact_rank_layout_version");
+            cuMemcpyDtoH(Pointer.to(actual),version,8);if(actual[0]!=CompactRankArchive.VERSION)throw new IllegalStateException("Compact rank layout version mismatch");}
+        catch(RuntimeException error){throw new IllegalStateException("Incompatible CUDA compact layout; rebuild native PTX",error);}
+    }
+    CUdeviceptr compactMetadata(){return compactTables==null?emptyMembership:compactTables.metadata;}
+    boolean compactCovers(int n,int floor,int ceiling){return compactTables!=null&&compactTables.covers(n,floor,ceiling);}
+    void loadCompactTables(Path root,int parentDegree,int parentFloor,int parentCeiling,int currentDegree,GpuCacheBudget budget) throws Exception {
+        if(!CompactRankArchive.enabled())return;int minimum=Integer.getInteger("extension.gpuCompactMinDegree",13);
+        if(minimum<1||minimum>18)throw new IllegalArgumentException("Compact GPU minimum degree must be 1..18");
+        if(compactTables==null)compactTables=new GpuCompactTables(this);
+        if(parentDegree>=minimum)compactTables.load(root,parentDegree,parentFloor,RetentionPlan.upper(parentDegree),budget);
+        LayerCatalog catalog=new LayerCatalog(root);
+        if(currentDegree>=minimum){int floor=catalog.tailFloor(currentDegree);if(floor>=0)compactTables.load(root,currentDegree,floor,RetentionPlan.upper(currentDegree),budget);}
+        for(int n=parentDegree-1;n>=minimum;n--){int floor=catalog.tailFloor(n);if(floor>=0)compactTables.load(root,n,floor,RetentionPlan.upper(n),budget);}
+    }
     CUdeviceptr membershipBits(){return membership==null?emptyMembership:membership.bits;}
     int membershipDegree(){return membership==null?-1:membership.degree;}
     int membershipDistance(){return membership==null?0:membership.distance;}
@@ -96,6 +114,7 @@ final class GpuStreamingCounter implements AutoCloseable {
     int parentLookupKind(int n,int floor) {
         if(Boolean.getBoolean("extension.forceDiskLookups"))return 0;
         if(tableDegree>=n&&patternFloors[n]<=floor)return 1;
+        if(compactCovers(n,floor,Math.min(floor+1,RetentionPlan.upper(n))))return 3;
         return membershipDegree()==n&&membershipDistance()==floor?2:0;
     }
     /** Protect a useful bitmap when its full four-bit rank table cannot fit.
@@ -106,8 +125,9 @@ final class GpuStreamingCounter implements AutoCloseable {
         if(maximum<0||maximum>18)throw new IllegalArgumentException("GPU membership degree must be auto or 0..18");
         activate();long[] free={0},total={0};cuMemGetInfo(free,total);LayerCatalog catalog=new LayerCatalog(root);
         for(int degree=maximum;degree>0;degree--) {
+            if(compactCovers(degree,RetentionPlan.upper(degree),RetentionPlan.upper(degree)))return 0;
             if(degree<=requested&&catalog.has(degree,RetentionPlan.upper(degree))) {
-                if(degree<=patternRequested&&degree<=GpuPatternLayout.configuredDegree()&&
+                if(degree<=patternRequested&&degree<=GpuPatternLayout.denseLimit(total[0])&&
                     budget.fits(new GpuPatternLayout(degree).bytes,free[0],tableBytes))return 0;
                 long bytes=GpuMembershipTable.bytesForDegree(degree);
                 if(budget.fits(bytes,free[0],0))return bytes;
@@ -126,7 +146,7 @@ final class GpuStreamingCounter implements AutoCloseable {
         // Try the nearest useful completed degree first. Larger ranks are useful
         // both to parent lookups and to distance-preserving DFS contractions.
         for(int degree=maximum;degree>0;degree--) {
-            boolean covered=tableDegree>=degree&&patternFloors[degree]!=Integer.MAX_VALUE;
+            boolean covered=tableDegree>=degree&&patternFloors[degree]!=Integer.MAX_VALUE||compactCovers(degree,RetentionPlan.upper(degree),RetentionPlan.upper(degree));
             if(!covered&&degree<=requested&&(membership==null||degree>membership.degree)) {
                 GpuMembershipTable loaded=GpuMembershipTable.load(this,root,degree,budget);
                 if(loaded!=null){if(membership!=null)membership.close();membership=loaded;return;}
@@ -135,6 +155,7 @@ final class GpuStreamingCounter implements AutoCloseable {
         }
     }
     long canonicalBloomReserve(Path root,int degree,int floor,int ceiling,GpuCacheBudget budget) throws Exception {
+        if(compactCovers(degree,floor,ceiling))return 0;
         long bytes=GpuCanonicalBloom.reserveBytes(root,degree,floor,ceiling);if(bytes==0)return 0;
         activate();long[] free={0},total={0};cuMemGetInfo(free,total);return budget.fits(bytes,free[0],0)?bytes:0;
     }
@@ -162,7 +183,7 @@ final class GpuStreamingCounter implements AutoCloseable {
     boolean copyPatternTablesFrom(GpuStreamingCounter source,GpuCacheBudget budget) {
         if(source==this)return true;
         activate();long[] free={0},total={0};cuMemGetInfo(free,total);
-        if(source.tableDegree>GpuPatternLayout.configuredDegree()||!budget.fits(source.tableBytes,free[0],tableBytes))return false;
+        if(source.tableDegree>GpuPatternLayout.denseLimit(total[0])||!budget.fits(source.tableBytes,free[0],tableBytes))return false;
         long[] starts=new long[2*GpuPatternLayout.DEGREES];source.activate();cuMemcpyDtoH(Pointer.to(starts),source.offsets,GpuPatternLayout.METADATA_BYTES);
         activate();cuMemFree(table);tableReady=false;cuMemAlloc(table,source.tableBytes);tableReady=true;tableBytes=source.tableBytes;
         Pointer staging=new Pointer();long chunk=Math.min(4L<<20,tableBytes);cuMemHostAlloc(staging,chunk,CU_MEMHOSTALLOC_PORTABLE);
@@ -174,6 +195,7 @@ final class GpuStreamingCounter implements AutoCloseable {
             cuMemcpyHtoD(offsets,Pointer.to(starts),GpuPatternLayout.METADATA_BYTES);tableDegree=source.tableDegree;
             System.arraycopy(source.patternFloors,0,patternFloors,0,patternFloors.length);
             cuCtxSynchronize();
+            releaseCoveredCompactTables();
         }finally{activate();cuMemFreeHost(staging);}
         System.out.printf("GPU_PATTERN_COPY device=%d source_device=%d degree=%d bytes=%d%n",context.deviceOrdinal,source.context.deviceOrdinal,tableDegree,tableBytes);
         return true;
@@ -188,7 +210,7 @@ final class GpuStreamingCounter implements AutoCloseable {
         LayerCatalog catalog=new LayerCatalog(root);
         int patternHorizon=Integer.getInteger("benchmark.patternHorizon",0);
         RetentionPlan patternPlan=patternHorizon==0?null:new RetentionPlan(patternHorizon);
-        int limit=GpuPatternLayout.configuredDegree();
+        int limit=GpuPatternLayout.denseLimit(total[0]);
         if(patternPlan!=null&&patternHorizon<Math.min(limit,requested))throw new IllegalArgumentException("Pattern horizon must cover the requested table degree");
         for(int n=1;n<=Math.min(limit,requested);n++){
             if(catalog.tailFloor(n)<0)continue;
@@ -223,6 +245,7 @@ final class GpuStreamingCounter implements AutoCloseable {
             CUfunction identities=new CUfunction();cuModuleGetFunction(identities,module,"initialize_pattern_identities");
             cuLaunchKernel(identities,1,1,1,32,1,1,0,null,Pointer.to(integer(maximum),Pointer.to(offsets),Pointer.to(table)),null);
             cuCtxSynchronize();
+            releaseCoveredCompactTables();
         }finally{cuMemFree(rows);}
         System.out.printf(java.util.Locale.ROOT,"GPU_PATTERN_TABLE device=%d degree=%d bytes=%d bits_per_distance=4 build_seconds=%.3f source=persisted-canonicals orbit_expansion=GPU%n",context.deviceOrdinal,maximum,size,(System.nanoTime()-began)/1e9);
     }
@@ -282,7 +305,11 @@ final class GpuStreamingCounter implements AutoCloseable {
         long[] free={0},total={0};cuMemGetInfo(free,total);
         return (int)Math.max(1,Math.min(Integer.MAX_VALUE-256,((long)(free[0]*fraction)-fixedBatchBytes(n))/bytesPerJob(n,high)));
     }
-    static long bytesPerJob(int n,int frames){return (long)frames*(n+2)+20+PackedPermutation5.bytes(n+1);}
+    private void releaseCoveredCompactTables() {
+        if(compactTables==null)return;
+        for(int n=1;n<=tableDegree;n++)if(patternFloors[n]<=compactTables.floor(n))compactTables.release(n);
+    }
+    static long bytesPerJob(int n,int frames){return (long)frames*(n+2)+20;}
     static long fixedBatchBytes(int n){return 44+4L*n*(n+1)*(n-1)/6;}
     static int capacityForBudget(int n,int frames,int requested,long bytes) {
         long capacity=(bytes-fixedBatchBytes(n))/bytesPerJob(n,frames);
@@ -300,7 +327,8 @@ final class GpuStreamingCounter implements AutoCloseable {
         long launches,activeJobs,tinyWaves,oddCycleResolved;double kernelMillis;
         final List<CUdeviceptr> allocations=new ArrayList<>();
         final List<CUdeviceptr> stateAllocations=new ArrayList<>();
-        final CUdeviceptr roots,weights,activeCount,counters,cuts,rootKeys;
+        final CUdeviceptr roots,weights,activeCount,counters,cuts;
+        CUdeviceptr rootKeys;
         CUdeviceptr stack,next,depth,stage,results,firstActive,secondActive;
         final int cutCount;
         long allocatedBytes,stateBytes;
@@ -327,13 +355,12 @@ final class GpuStreamingCounter implements AutoCloseable {
             activate();
             try {
                 roots=allocate(capacity*8L);
-                rootKeys=allocate((long)capacity*PackedPermutation5.bytes(n+1));
                 weights=allocate(capacity);
                 activeCount=allocate(4);counters=allocate(40);
                 int[] moves=ExactSorter.cuts(n);cutCount=moves.length;
                 cuts=allocate(moves.length*4L);cuMemcpyHtoD(cuts,Pointer.to(moves),moves.length*4L);
                 if(stream!=null){cuMemAllocHost(hostRanks,capacity*8L);pinnedCount=1;cuMemAllocHost(hostResults,capacity);pinnedCount=2;
-                    cuMemAllocHost(hostProgress,40);pinnedCount=3;cuMemAllocHost(hostKeys,(long)capacity*PackedPermutation5.bytes(n+1));pinnedCount=4;
+                    cuMemAllocHost(hostProgress,40);pinnedCount=3;
                     cuEventCreate(timedStart,0);eventCount=1;cuEventCreate(timedEnd,0);eventCount=2;
                     cuEventCreate(completion,CUevent_flags.CU_EVENT_BLOCKING_SYNC|CUevent_flags.CU_EVENT_DISABLE_TIMING);eventCount=3;
                     // cuMemcpyHtoD(cuts,...) may return after staging pageable memory.
@@ -407,7 +434,7 @@ final class GpuStreamingCounter implements AutoCloseable {
                         Pointer.to(activeCount),integer(n),integer(high),integer(stateCapacity),integer(low),integer(high),integer(quantum),
                         Pointer.to(cuts),integer(cutCount),integer(filterSlackMoves?1:0),integer(prepassRootDeletions?1:0),integer(prepassRootMoves?1:0),integer(prepassOddCycles?1:0),Pointer.to(stack),Pointer.to(next),Pointer.to(depth),
                         Pointer.to(stage),Pointer.to(weights),Pointer.to(results),Pointer.to(table),Pointer.to(offsets),integer(tableDegree),
-                        Pointer.to(membershipBits()),integer(membershipDegree()),integer(membershipDistance()),Pointer.to(counters));
+                        Pointer.to(membershipBits()),integer(membershipDegree()),integer(membershipDistance()),Pointer.to(compactMetadata()),Pointer.to(counters));
                     cuLaunchKernel(advance,(size+255)/256,1,1,256,1,1,0,null,args,null);
                     cuMemcpyDtoH(Pointer.to(totals),counters,24);
                     if(progress!=null)progress.accept(totals.clone());
@@ -443,6 +470,11 @@ final class GpuStreamingCounter implements AutoCloseable {
             else {hostRanks.getByteBuffer(0,jobs*8L).order(ByteOrder.nativeOrder()).asLongBuffer().put(ranks,0,jobs);
                 cuMemcpyHtoDAsync(roots,hostRanks,jobs*8L,stream);cuMemsetD8Async(weights,(byte)1,jobs,stream);cuMemsetD32Async(counters,0,10,stream);}
             if(expectedKeys!=null) {
+                if(rootKeys==null) {
+                    long keyBytes=(long)capacity*PackedPermutation5.bytes(n+1);
+                    rootKeys=allocate(keyBytes);
+                    if(stream!=null){cuMemAllocHost(hostKeys,keyBytes);pinnedCount=4;}
+                }
                 int bytes=Math.multiplyExact(jobs,PackedPermutation5.bytes(n+1));
                 if(keyOffset<0||keyOffset>expectedKeys.length-bytes)throw new IllegalArgumentException("Malformed expected root keys");
                 if(stream==null)cuMemcpyHtoD(rootKeys,Pointer.to(expectedKeys).withByteOffset(keyOffset),bytes);
@@ -468,7 +500,7 @@ final class GpuStreamingCounter implements AutoCloseable {
                         Pointer.to(activeCount),integer(n),integer(high),integer(stateCapacity),integer(low),integer(high),integer(quantum),
                         Pointer.to(cuts),integer(cutCount),integer(filterSlackMoves?1:0),integer(prepassRootDeletions?1:0),integer(prepassRootMoves?1:0),integer(prepassOddCycles?1:0),Pointer.to(stack),Pointer.to(next),Pointer.to(depth),
                         Pointer.to(stage),Pointer.to(weights),Pointer.to(results),Pointer.to(table),Pointer.to(offsets),integer(tableDegree),
-                        Pointer.to(membershipBits()),integer(membershipDegree()),integer(membershipDistance()),Pointer.to(counters));
+                        Pointer.to(membershipBits()),integer(membershipDegree()),integer(membershipDistance()),Pointer.to(compactMetadata()),Pointer.to(counters));
                     cuLaunchKernel(advance,(size+255)/256,1,1,256,1,1,0,stream,args,null);
                 }
                 launches++;activeJobs+=pending;if(pending<256)tinyWaves++;
@@ -502,6 +534,7 @@ final class GpuStreamingCounter implements AutoCloseable {
     }
     public void close() {
         if(context.contextReady)activate();
+        if(compactTables!=null){compactTables.close();compactTables=null;}
         if(canonicalBloom!=null){canonicalBloom.close();canonicalBloom=null;}
         if(membership!=null){membership.close();membership=null;}
         if(offsetsReady){cuMemFree(offsets);offsetsReady=false;}

@@ -12,7 +12,7 @@ final class AsyncCanonicalWriter implements AutoCloseable {
     static {RocksDB.loadLibrary();}
     private record Batch(byte[] data,int records){}
     private static final Batch FINISH=new Batch(null,-1),ABORT=new Batch(null,-2);
-    // The weight is transient producer metadata for the aggregate counts, never a database value.
+    // Construction values retain the weight for validation; completed archives retain aggregate counts.
     final int degree,floor,ceiling,horizon,payloadBytes,rowBytes,batchRecords;
     final boolean exact;
     final boolean decision;
@@ -45,7 +45,7 @@ final class AsyncCanonicalWriter implements AutoCloseable {
         this.degree=degree;this.floor=floor;this.horizon=horizon;this.batchRecords=batchRecords;
         if(decision&&!exact)throw new IllegalArgumentException("Decision output must be exact");
         this.exact=exact;this.decision=decision;ceiling=exact?floor:RetentionPlan.upper(degree);
-        payloadBytes=PackedPermutation5.bytes(degree+1);rowBytes=payloadBytes+2;
+        payloadBytes=PermutationRank.bytes(degree);rowBytes=payloadBytes+2;
         this.sizing=sizing;
         if(sizing.batchBytes()!=Math.multiplyExact(batchRecords,rowBytes))throw new IllegalArgumentException("Incompatible write buffer sizing");
         pending=new ArrayBlockingQueue<>(sizing.pendingBatches());recycled=new ArrayBlockingQueue<>(sizing.recycledBatches());
@@ -91,19 +91,19 @@ final class AsyncCanonicalWriter implements AutoCloseable {
         private byte[] rows;
         private int count;
         void append(byte[] omega,int distance,int weight) throws IOException {
+            appendRank(PermutationRank.ofOmega(omega,degree),distance,weight);
+        }
+        void appendRank(long rank,int distance,int weight) throws IOException {
             if(exact&&distance!=floor)return;
-            if(decision){check();firstMatch.compareAndSet(null,PackedPermutation5.encode(omega,degree+1));return;}
+            if(rank<0||rank>=SmallTables.FACTORIAL[degree])throw new IllegalArgumentException("Invalid canonical output rank");
+            if(decision){check();byte[] word=new byte[degree],omega=new byte[degree+1];SmallTables.unrank(rank,degree,word,0);ToricOrbit.omegaFromWord(word,degree,omega);firstMatch.compareAndSet(null,PackedPermutation5.encode(omega,degree+1));return;}
             check();if(rows==null)rows=acquire();
             int offset=count*rowBytes;rows[offset]=(byte)distance;
-            PackedPermutation5.encode(omega,degree+1,rows,offset+1);rows[offset+rowBytes-1]=(byte)weight;
+            PermutationRank.encode(rank,degree,rows,offset+1);rows[offset+rowBytes-1]=(byte)weight;
             if(++count==batchRecords)flush();
         }
         void appendPacked(byte[] packed,int offset,int distance,int weight) throws IOException {
-            if(exact&&distance!=floor)return;
-            if(decision){check();firstMatch.compareAndSet(null,Arrays.copyOfRange(packed,offset,offset+payloadBytes));return;}
-            check();if(rows==null)rows=acquire();int out=count*rowBytes;
-            rows[out]=(byte)distance;System.arraycopy(packed,offset,rows,out+1,payloadBytes);rows[out+rowBytes-1]=(byte)weight;
-            if(++count==batchRecords)flush();
+            if(exact&&distance!=floor)return;appendRank(PermutationRank.ofPackedOmega(packed,offset,degree),distance,weight);
         }
         void flush() throws IOException {if(count>0){byte[] owned=rows;int records=count;rows=null;count=0;submit(owned,records);}}
         public void close() throws IOException {flush();}
@@ -150,7 +150,11 @@ final class AsyncCanonicalWriter implements AutoCloseable {
             if(expectedOutputCount>=0&&weighted[ceiling]!=expectedOutputCount)
                 throw new IOException("Reference count mismatch before publication: n="+degree+" distance="+ceiling+" actual="+weighted[ceiling]+" expected="+expectedOutputCount);
             LayerManifest manifest=new LayerManifest(degree,floor,horizon,canonical,weighted,exact);
-            manifest.write(staging);Files.move(staging,target,StandardCopyOption.ATOMIC_MOVE);completed.complete(manifest);
+            manifest.write(staging);
+            CompactRankArchive.build(staging,manifest);
+            if(!Boolean.parseBoolean(System.getProperty("extension.compactKeepRocksDb","false")))
+                try(var files=Files.walk(staging.resolve("db"))){for(Path file:files.sorted(Comparator.reverseOrder()).toList())Files.delete(file);}
+            Files.move(staging,target,StandardCopyOption.ATOMIC_MOVE);completed.complete(manifest);
         }catch(Throwable error){failure.compareAndSet(null,error);completed.completeExceptionally(error);}
         finally{aggregateBytes.set(0);aggregateSegments.set(0);}
     }
@@ -220,7 +224,7 @@ final class AsyncCanonicalWriter implements AutoCloseable {
     private void writeBatch(RocksDB database,WriteOptions options,Batch batch,long[] canonical,long[] weighted) throws Exception {
         // Native WriteBatch wire format: fixed64 sequence, fixed32 count, then Put(key,value) records.
         // Keys and values are <=127 bytes, so every length fits a single varint byte.
-        byte[] encoded=new byte[Math.addExact(12,Math.multiplyExact(batch.records,payloadBytes+4))];
+        byte[] encoded=new byte[Math.addExact(12,Math.multiplyExact(batch.records,payloadBytes+5))];
         for(int b=0;b<4;b++)encoded[8+b]=(byte)(batch.records>>>(8*b));
         long[] counts=new long[12],weights=new long[12];int out=12;
         for(int i=0;i<batch.records;i++) {
@@ -229,7 +233,7 @@ final class AsyncCanonicalWriter implements AutoCloseable {
                 throw new IOException("Invalid distance/orbit metadata in asynchronous buffer");
             encoded[out++]=1;encoded[out++]=(byte)payloadBytes;
             System.arraycopy(batch.data,offset+1,encoded,out,payloadBytes);out+=payloadBytes;
-            encoded[out++]=1;encoded[out++]=(byte)(distance&15);counts[distance]++;weights[distance]+=weight;
+            encoded[out++]=2;encoded[out++]=(byte)(distance&15);encoded[out++]=(byte)weight;counts[distance]++;weights[distance]+=weight;
         }
         try(WriteBatch writes=new WriteBatch(encoded)){database.write(options,writes);}
         nativeWrites.incrementAndGet();

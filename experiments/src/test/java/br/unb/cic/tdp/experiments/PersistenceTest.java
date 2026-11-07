@@ -5,7 +5,6 @@ import java.nio.file.*;
 import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.rocksdb.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class PersistenceTest {
@@ -13,7 +12,8 @@ class PersistenceTest {
     @Test void aReferenceCountMismatchCannotPublishACompletedStore() throws Exception {
         AsyncCanonicalWriter writer=new AsyncCanonicalWriter(root,3,2,3,8,2,true);
         try {
-            try(var buffer=writer.buffer()){buffer.append(new byte[]{3,2,1,0},2,1);}
+            byte[] omega=new byte[4];ToricOrbit.canonicalOmega(new byte[]{3,2,1},3,omega);
+            try(var buffer=writer.buffer()){buffer.append(omega,2,1);}
             assertThrows(IOException.class,()->writer.finish(2));
             assertFalse(Files.exists(writer.target));assertFalse(Files.exists(writer.staging.resolve("manifest.properties")));
         }finally{assertThrows(IOException.class,writer::close);}
@@ -44,25 +44,15 @@ class PersistenceTest {
             assertArrayEquals(new long[]{1,20,68,31,0,0,0,0,0,0,0,0},manifest.weighted);
         }
         try(CanonicalLayerStore store=new CanonicalLayerStore(target)) {
-            assertFalse(store.manifest.legacy());assertEquals(store.payloadBytes+1,store.rowBytes);
+            assertNotNull(store.compact);assertEquals(store.payloadBytes+1,store.rowBytes);
             byte[] word=new byte[5],omega=new byte[6],exact=DiametralExtensionAudit.bfs(5);
             for(int rank=0;rank<120;rank++) {
                 SmallTables.unrank(rank,5,word,0);ToricOrbit.canonicalOmega(word,5,omega);
                 assertEquals(exact[rank],store.distance(omega,0));
                 assertEquals(exact[rank]>=2?exact[rank]:-1,store.distance(omega,2));
             }
-            // Inspect actual persisted bytes, rather than a reconstructed cursor row.
-            int records=0;
-            try(RocksIterator iterator=store.database.newIterator()) {
-                for(iterator.seekToFirst();iterator.isValid();iterator.next()) {
-                    byte[] key=iterator.key(),value=iterator.value();
-                    assertEquals(PackedPermutation5.bytes(6),key.length);assertEquals(1,value.length);
-                    assertEquals(0,value[0]&0xf0);
-                    PackedPermutation5.decode(key,0,6,omega);ToricOrbit.wordFromOmega(omega,5,word);
-                    assertEquals(exact[(int)SmallTables.rank(word,5)],value[0]);records++;
-                }
-                iterator.status();
-            }
+            var ranks=store.compact.ranks();int records=0;long rank;
+            while((rank=ranks.next())>=0){assertEquals(exact[(int)rank],store.compact.distanceAt(records));records++;}
             assertEquals(20,records);
             try(CanonicalLayerStore.BatchCursor cursor=store.cursor(2)) {
                 byte[] rows;int filtered=0;
@@ -71,47 +61,6 @@ class PersistenceTest {
                 }
                 assertEquals(store.manifest.canonical[2]+store.manifest.canonical[3],filtered);
             }
-        }
-    }
-    @Test void legacyWeightStoresStillFeedNewDistanceStores() throws Exception {
-        int n=5;Path target=CanonicalLayerStore.path(root,n,0);Files.createDirectories(target);
-        byte[] exact=DiametralExtensionAudit.bfs(n),word=new byte[n],omega=new byte[n+1];
-        long[] canonical=new long[12],weighted=new long[12];
-        try(Options options=new Options().setCreateIfMissing(true);
-            RocksDB database=RocksDB.open(options,target.resolve("db").toString());
-            WriteOptions writes=new WriteOptions().setDisableWAL(true);
-            FlushOptions flush=new FlushOptions().setWaitForFlush(true)) {
-            for(int rank=0;rank<exact.length;rank++) {
-                SmallTables.unrank(rank,n,word,0);int weight=ToricOrbit.weight(word,n);if(weight==0)continue;
-                ToricOrbit.omegaFromWord(word,n,omega);byte[] key=new byte[PackedPermutation5.bytes(n+1)+1];
-                key[0]=exact[rank];PackedPermutation5.encode(omega,n+1,key,1);
-                database.put(writes,key,new byte[]{(byte)weight});canonical[exact[rank]]++;weighted[exact[rank]]+=weight;
-            }
-            database.flush(flush);
-        }
-        new LayerManifest(n,0,6,canonical,weighted).write(target);
-        Properties properties=new Properties();Path manifest=target.resolve("manifest.properties");
-        try(var input=Files.newInputStream(manifest)){properties.load(input);}
-        properties.remove("storage"); // The original format had no layout discriminator.
-        try(var output=Files.newOutputStream(manifest)){properties.store(output,"Legacy fixture");}
-        try(CanonicalLayerStore store=new CanonicalLayerStore(target);CanonicalLayerStore.BatchCursor cursor=store.cursor(2)) {
-            assertTrue(store.manifest.legacy());
-            for(int rank=0;rank<exact.length;rank++) {
-                SmallTables.unrank(rank,n,word,0);ToricOrbit.canonicalOmega(word,n,omega);
-                assertEquals(exact[rank],store.distance(omega,0));
-                assertEquals(exact[rank]>=2?exact[rank]:-1,store.distance(omega,2));
-            }
-            byte[] rows;long[] reconstructed=new long[12];
-            while((rows=cursor.nextBatch(3))!=null)for(int offset=0;offset<rows.length;offset+=store.rowBytes) {
-                int distance=rows[offset]&255;assertTrue(distance>=2);
-                PackedPermutation5.decode(rows,offset+1,n+1,omega);ToricOrbit.wordFromOmega(omega,n,word);
-                reconstructed[distance]+=ToricOrbit.weight(word,n);
-            }
-            assertEquals(weighted[2],reconstructed[2]);assertEquals(weighted[3],reconstructed[3]);
-        }
-        ExtensionRun.extend(ExtensionRunTest.config(root,6,false),new RetentionPlan(6),6,target,new SmallTables(6));
-        try(CanonicalLayerStore store=new CanonicalLayerStore(CanonicalLayerStore.find(root,6,4))) {
-            assertFalse(store.manifest.legacy());assertEquals(45,store.manifest.weighted[4]);
         }
     }
     @Test void exactStoresDiscardOtherDistancesAndPublishEmptySets() throws Exception {
@@ -161,25 +110,6 @@ class PersistenceTest {
         try(CanonicalLayerStore store=new LayerCatalog(root).open(n,2,3)) {
             int[] distances=store.distances(keys,2);
             for(int i=0;i<keys.length;i++)assertEquals(exact[i%exact.length]>=2?exact[i%exact.length]:-1,distances[i]);
-        }
-    }
-    @Test void malformedDistanceValuesAreRejectedByLookupAndStreaming() throws Exception {
-        byte[] omega={0,1};Path target=CanonicalLayerStore.path(root,1,0);
-        try(AsyncCanonicalWriter writer=new AsyncCanonicalWriter(root,1,0,1,1,1)) {
-            try(AsyncCanonicalWriter.Buffer buffer=writer.buffer()){buffer.append(omega,0,1);}writer.finish();
-        }
-        for(byte[] bad:new byte[][]{new byte[]{16},new byte[]{15},new byte[0]}) {
-            try(Options options=new Options();RocksDB database=RocksDB.open(options,target.resolve("db").toString());
-                WriteOptions writes=new WriteOptions().setDisableWAL(true);FlushOptions flush=new FlushOptions().setWaitForFlush(true)) {
-                database.put(writes,PackedPermutation5.encode(omega,2),bad);database.flush(flush);
-            }
-            try(CanonicalLayerStore store=new CanonicalLayerStore(target);CanonicalLayerStore.BatchCursor cursor=store.cursor(0)) {
-                assertThrows(IOException.class,()->store.distance(omega,0));assertThrows(IOException.class,()->cursor.nextBatch(1));
-                String previous=System.getProperty("extension.parallelReadThreshold");System.setProperty("extension.parallelReadThreshold","0");
-                try(CanonicalLayerStore.BatchCursor parallel=store.source(0,1,2)) {
-                    assertThrows(IOException.class,()->parallel.nextBatch(1));
-                }finally{if(previous==null)System.clearProperty("extension.parallelReadThreshold");else System.setProperty("extension.parallelReadThreshold",previous);}
-            }
         }
     }
     @Test void backgroundFailureDoesNotPublishOrDeadlockProducers() throws Exception {

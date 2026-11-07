@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit;
 /** Shared aggregation target and the smaller independently encoded native write jobs. */
 record WriteAggregation(long targetRecords,long flushNanos,int nativeRecords,int rowBytes,int payloadBytes) {
     static WriteAggregation disabled(int degree,int producerRecords) {
-        int payload=PackedPermutation5.bytes(degree+1);
+        int payload=PermutationRank.bytes(degree);
         return new WriteAggregation(0,0,producerRecords,payload+2,payload);
     }
     static WriteAggregation system(int degree,int producerRecords) {
@@ -17,17 +17,17 @@ record WriteAggregation(long targetRecords,long flushNanos,int nativeRecords,int
         return of(degree,Math.multiplyExact(mib,1L<<20),millis,Math.multiplyExact(nativeMiB,1L<<20));
     }
     static WriteAggregation of(int degree,long targetBytes,long flushMillis,long nativeBytes) {
-        int payload=PackedPermutation5.bytes(degree+1),row=payload+2;
-        if(targetBytes<row||flushMillis<1||nativeBytes<12L+payload+4||nativeBytes>Integer.MAX_VALUE-8)
+        int payload=PermutationRank.bytes(degree),row=payload+2;
+        if(targetBytes<row||flushMillis<1||nativeBytes<12L+payload+5||nativeBytes>Integer.MAX_VALUE-8)
             throw new IllegalArgumentException("Invalid write aggregation size, interval or native batch size");
         long target=targetBytes/row;
-        int records=(int)Math.min(target,(nativeBytes-12)/(payload+4));
+        int records=(int)Math.min(target,(nativeBytes-12)/(payload+5));
         return new WriteAggregation(target,Math.multiplyExact(flushMillis,TimeUnit.MILLISECONDS.toNanos(1)),records,row,payload);
     }
     boolean enabled(){return targetRecords>0;}
     long targetBytes(){return Math.multiplyExact(targetRecords,rowBytes);}
     long nativeRawBytes(){return Math.multiplyExact(nativeRecords,rowBytes);}
-    long nativeEncodedBytes(){return Math.addExact(12,Math.multiplyExact((long)nativeRecords,payloadBytes+4));}
+    long nativeEncodedBytes(){return Math.addExact(12,Math.multiplyExact((long)nativeRecords,payloadBytes+5));}
     long maximumAggregateBytes() {
         // The last segment can be partially full; include segment/list object overhead.
         long segments=Math.floorDiv(targetRecords+nativeRecords-1,nativeRecords);

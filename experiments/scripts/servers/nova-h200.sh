@@ -4,13 +4,14 @@
 # Build and run TD(18) with no arguments; completed exact sets are reused.
 set -euo pipefail
 task_repo=$(cd "$(dirname "$0")/../../.." && pwd)
+task_build_root=${TDP_EXPERIMENT_BUILD_ROOT:-${TMPDIR:-/tmp}/td16-isolated-build}
 cd "$task_repo"
 mkdir -p experiments/logs
 
 # Build before setting the experiment's large heap and GC options so Maven
 # keeps its normal memory settings. CMake detects the visible CUDA architecture.
 printf 'Building the experiment and native CUDA kernels...\n'
-mvn -q -pl experiments -am -Pcuda-native -DskipTests package dependency:copy-dependencies
+mvn -q -pl experiments -am -Pisolated-build,cuda-native -Dtdp.isolatedBuildRoot="$task_build_root" -DskipTests package dependency:copy-dependencies
 
 # Leave RAM outside the heap for RocksDB (including its per-store caches),
 # pinned CUDA buffers and the filesystem cache. Use the stated 86 cores;
@@ -27,5 +28,5 @@ exec bash "$task_repo/experiments/run.sh" diameter --no-build \
   --gpu-devices 0 --gpu-slots 16 --gpu-slot-mib 0 --vram-fraction 0.90 \
   --gpu-batch-records 2097152 --gpu-queue 128 --gpu-parent-batch 8192 \
   --gpu-quantum 4096 \
-  --cuda-ptx-dir "$task_repo/experiments/target/native" \
+  --cuda-ptx-dir "$task_build_root/experiments/native" \
   --log-file "$task_repo/experiments/logs/extension.log" "$@"

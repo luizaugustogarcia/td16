@@ -44,6 +44,17 @@ class GpuPatternLayoutTest {
         assertFalse(budget.fits(1,gib,0));
         assertThrows(IllegalArgumentException.class,()->new GpuCacheBudget(-1,0.90));
     }
+    @Test void automaticDenseCachesScaleWithVramAndExplicitOverridesRemainRespected() throws Exception {
+        long gib=1L<<30;
+        GpuSettingsTest.configured(Map.of("extension.compactSets","true","extension.gpuPatternMaxDegree","auto"),()->{
+            assertEquals(12,GpuPatternLayout.denseLimit(8*gib));
+            assertEquals(13,GpuPatternLayout.denseLimit(24*gib));
+            assertEquals(14,GpuPatternLayout.denseLimit(141*gib));
+        });
+        GpuSettingsTest.configured(Map.of("extension.gpuPatternMaxDegree","14"),()->assertEquals(14,GpuPatternLayout.denseLimit(8*gib)));
+        GpuSettingsTest.configured(Map.of("extension.gpuDenseMaxDegree","13"),()->assertEquals(13,GpuPatternLayout.denseLimit(8*gib)));
+        GpuSettingsTest.configured(Map.of("extension.compactSets","false"),()->assertEquals(18,GpuPatternLayout.denseLimit(8*gib)));
+    }
     @Test void aUsefulBitmapCanDisplaceASmallerDenseCacheWhenBothWouldNotFit() {
         long gib=1L<<30;GpuCacheBudget budget=new GpuCacheBudget(gib,0.90);
         long free=14*gib,bitmap=GpuMembershipTable.bytesForDegree(14);

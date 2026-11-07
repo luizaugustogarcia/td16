@@ -23,4 +23,20 @@ final class GpuPatternLayout {
         if(degree<0||degree>MAX_DEGREE)throw new IllegalArgumentException("GPU pattern degree must be 0.."+MAX_DEGREE);
         return degree;
     }
+    static int denseLimit() {
+        int configured=configuredDegree();
+        if(!CompactRankArchive.enabled()||!System.getProperty("extension.gpuPatternMaxDegree","auto").equals("auto"))return configured;
+        int maximum=Integer.getInteger("extension.gpuDenseMaxDegree",MAX_DEGREE);
+        if(maximum<0||maximum>MAX_DEGREE)throw new IllegalArgumentException("Dense GPU degree must be 0..18");
+        return Math.min(configured,maximum);
+    }
+    static int denseLimit(long totalVramBytes) {
+        int maximum=denseLimit();
+        if(!CompactRankArchive.enabled()||!System.getProperty("extension.gpuPatternMaxDegree","auto").equals("auto")||
+            System.getProperty("extension.gpuDenseMaxDegree")!=null)return maximum;
+        // Keep direct lookup for hot degrees while leaving space for sparse tails and DFS.
+        long bytes=(long)(totalVramBytes*0.35);
+        while(maximum>0&&new GpuPatternLayout(maximum).bytes>bytes)maximum--;
+        return maximum;
+    }
 }
